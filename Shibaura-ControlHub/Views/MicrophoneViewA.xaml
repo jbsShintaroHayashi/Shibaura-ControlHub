@@ -1,0 +1,309 @@
+<UserControl x:Class="Shibaura_ControlHub.Views.MicrophoneViewA"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:Shibaura_ControlHub.Views"
+             mc:Ignorable="d" 
+             d:DesignHeight="1280" d:DesignWidth="1920">
+    <StackPanel Margin="12">
+        <TextBlock Text="音量調整" Style="{StaticResource PageTitleStyle}"/>
+        <Grid Margin="0,0,0,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="100"/>
+                <ColumnDefinition Width="100"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 出力調整  -->
+            <TextBlock Grid.Row="0" Grid.ColumnSpan="4" Text="出力調整" Style="{StaticResource SectionHeaderStyle}"/>
+            
+            <!-- 出力 S1 -->
+            <Border Grid.Row="1" Grid.Column="0" Width="90" Margin="5,4" Padding="5" BorderThickness="1" BorderBrush="{StaticResource BorderBrush}">
+                <StackPanel HorizontalAlignment="Center">
+                    <Grid Width="50" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding OutputFaderValues[0], StringFormat='{}{0:0}'}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,3,0,5">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                    <Slider x:Name="SliderS1"
+                            Style="{StaticResource TouchSlider}"
+                            Orientation="Vertical"
+                            Height="196"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="{Binding OutputFaderValues[0], Mode=TwoWay}"/>
+                    <TextBlock Text="S1" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,3">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ToggleButton Content="ミュート" Padding="11,7" FontSize="16" FontWeight="Bold" Foreground="White" Background="#9CA3AF" HorizontalAlignment="Center" Margin="0,8,0,0" BorderThickness="0" IsChecked="{Binding OutputMuteStates[0], Mode=TwoWay}">
+                        <ToggleButton.Template>
+                            <ControlTemplate TargetType="ToggleButton">
+                                <Border x:Name="bg" Background="{TemplateBinding Background}" CornerRadius="3">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter TargetName="bg" Property="Background" Value="#EF4444"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="bg" Property="Opacity" Value="0.6"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </ToggleButton.Template>
+                    </ToggleButton>
+                </StackPanel>
+            </Border>
+
+            <!-- 出力 S2 -->
+            <Border Grid.Row="1" Grid.Column="1" Width="90" Margin="5,4" Padding="5" BorderThickness="1" BorderBrush="{StaticResource BorderBrush}">
+                <StackPanel HorizontalAlignment="Center">
+                    <Grid Width="50" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding OutputFaderValues[1], StringFormat='{}{0:0}'}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,3,0,5">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                    <Slider x:Name="SliderS2"
+                            Style="{StaticResource TouchSlider}"
+                            Orientation="Vertical"
+                            Height="196"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="{Binding OutputFaderValues[1], Mode=TwoWay}"/>
+                    <TextBlock Text="S2" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,3">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ToggleButton Content="ミュート" Padding="11,7" FontSize="16" FontWeight="Bold" Foreground="White" Background="#9CA3AF" HorizontalAlignment="Center" Margin="0,8,0,0" BorderThickness="0" IsChecked="{Binding OutputMuteStates[1], Mode=TwoWay}">
+                        <ToggleButton.Template>
+                            <ControlTemplate TargetType="ToggleButton">
+                                <Border x:Name="bg" Background="{TemplateBinding Background}" CornerRadius="3">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter TargetName="bg" Property="Background" Value="#EF4444"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="bg" Property="Opacity" Value="0.6"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </ToggleButton.Template>
+                    </ToggleButton>
+                </StackPanel>
+            </Border>
+            
+            <!-- 入力調整 -->
+            <TextBlock Grid.Row="2" Grid.ColumnSpan="4" Text="入力調整" Style="{StaticResource SectionHeaderStyle}" Margin="0,10,0,0"/>
+
+            <!-- フェーダー1 -->
+            <Border Grid.Row="3" Grid.Column="0" Width="90" Margin="5,4" Padding="5" BorderThickness="1" BorderBrush="{StaticResource BorderBrush}">
+                <StackPanel HorizontalAlignment="Center">
+                    <Grid Width="50" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding MicrophoneFaderValues[0], StringFormat='{}{0:0}'}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,3,0,5">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                    <Slider x:Name="SliderM1"
+                            Style="{StaticResource TouchSlider}"
+                            Orientation="Vertical"
+                            Height="196"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="{Binding MicrophoneFaderValues[0], Mode=TwoWay}"/>
+                    <TextBlock Text="M1" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,3">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ToggleButton Content="ミュート" Padding="11,7" FontSize="16" FontWeight="Bold" Foreground="White" Background="#9CA3AF" HorizontalAlignment="Center" Margin="0,8,0,0" BorderThickness="0" IsChecked="{Binding MicrophoneMuteStates[0], Mode=TwoWay}">
+                        <ToggleButton.Template>
+                            <ControlTemplate TargetType="ToggleButton">
+                                <Border x:Name="bg" Background="{TemplateBinding Background}" CornerRadius="3">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter TargetName="bg" Property="Background" Value="#EF4444"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="bg" Property="Opacity" Value="0.6"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </ToggleButton.Template>
+                    </ToggleButton>
+                </StackPanel>
+            </Border>
+            
+            <!-- フェーダー2 -->
+            <Border Grid.Row="3" Grid.Column="1" Width="70" Margin="12,4" Padding="5" BorderThickness="1" BorderBrush="{StaticResource BorderBrush}">
+                <StackPanel HorizontalAlignment="Center">
+                    <Grid Width="50" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding MicrophoneFaderValues[1], StringFormat='{}{0:0}'}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,3,0,5">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                    <Slider x:Name="SliderM2"
+                            Style="{StaticResource TouchSlider}"
+                            Orientation="Vertical"
+                            Height="196"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="{Binding MicrophoneFaderValues[1], Mode=TwoWay}"/>
+                    <TextBlock Text="M2" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,3">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ToggleButton Content="ミュート" Padding="11,7" FontSize="16" FontWeight="Bold" Foreground="White" Background="#9CA3AF" HorizontalAlignment="Center" Margin="0,8,0,0" BorderThickness="0" IsChecked="{Binding MicrophoneMuteStates[1], Mode=TwoWay}">
+                        <ToggleButton.Template>
+                            <ControlTemplate TargetType="ToggleButton">
+                                <Border x:Name="bg" Background="{TemplateBinding Background}" CornerRadius="3">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter TargetName="bg" Property="Background" Value="#EF4444"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="bg" Property="Opacity" Value="0.6"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                </StackPanel>
+            </Border>
+            
+            <!-- フェーダー3 -->
+            <Border Grid.Row="3" Grid.Column="2" Width="70" Margin="12,4" Padding="5" BorderThickness="1" BorderBrush="{StaticResource BorderBrush}">
+                <StackPanel HorizontalAlignment="Center">
+                    <Grid Width="50" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding MicrophoneFaderValues[2], StringFormat='{}{0:0}'}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,3,0,5">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                    <Slider x:Name="SliderM3"
+                            Style="{StaticResource TouchSlider}"
+                            Orientation="Vertical"
+                            Height="196"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="{Binding MicrophoneFaderValues[2], Mode=TwoWay}"/>
+                    <TextBlock Text="M3" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,3">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ToggleButton Content="ミュート" Padding="11,7" FontSize="16" FontWeight="Bold" Foreground="White" Background="#9CA3AF" HorizontalAlignment="Center" Margin="0,8,0,0" BorderThickness="0">
+                        <ToggleButton.Template>
+                            <ControlTemplate TargetType="ToggleButton">
+                                <Border x:Name="bg" Background="{TemplateBinding Background}" CornerRadius="3">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter TargetName="bg" Property="Background" Value="#EF4444"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="bg" Property="Opacity" Value="0.6"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                </StackPanel>
+            </Border>
+            
+            <!-- フェーダー4 -->
+            <Border Grid.Row="3" Grid.Column="3" Width="70" Margin="12,4" Padding="5" BorderThickness="1" BorderBrush="{StaticResource BorderBrush}">
+                <StackPanel HorizontalAlignment="Center">
+                    <Grid Width="50" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding MicrophoneFaderValues[3], StringFormat='{}{0:0}'}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,3,0,5">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                    <Slider x:Name="SliderM4"
+                            Style="{StaticResource TouchSlider}"
+                            Orientation="Vertical"
+                            Height="196"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="{Binding MicrophoneFaderValues[3], Mode=TwoWay}"/>
+                    <TextBlock Text="M4" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,5,0,3">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ToggleButton Content="ミュート" Padding="11,7" FontSize="16" FontWeight="Bold" Foreground="White" Background="#9CA3AF" HorizontalAlignment="Center" Margin="0,8,0,0" BorderThickness="0" IsChecked="{Binding MicrophoneMuteStates[3], Mode=TwoWay}">
+                        <ToggleButton.Template>
+                            <ControlTemplate TargetType="ToggleButton">
+                                <Border x:Name="bg" Background="{TemplateBinding Background}" CornerRadius="3">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter TargetName="bg" Property="Background" Value="#EF4444"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="bg" Property="Opacity" Value="0.6"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </ToggleButton.Template>
+                    </ToggleButton>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </StackPanel>
+</UserControl>
+

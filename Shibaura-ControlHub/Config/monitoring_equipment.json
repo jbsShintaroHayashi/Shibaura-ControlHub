@@ -1,0 +1,115 @@
+{
+  "equipment": [
+    {
+      "name": "マトリクススイッチャ",
+      "statusCode": 2,
+      "currentValue": "0",
+      "statusDetailCode": 0,
+      "lastUpdate": "初期状態",
+      "ipAddress": "192.168.100.41",
+      "port": 6000,
+      "deviceType": 2,
+      "modeDisplayFlag": 0
+    },
+    {
+      "name": "デジタルシグナルプロセッサ",
+      "statusCode": 2,
+      "currentValue": "0",
+      "statusDetailCode": 0,
+      "lastUpdate": "初期状態",
+      "ipAddress": "192.168.1.100",
+      "port": 6000,
+      "deviceType": 2,
+      "modeDisplayFlag": 0
+    },
+    {
+      "name": "ライブスイッチャ(e-sports)",
+      "statusCode": 2,
+      "currentValue": "0",
+      "statusDetailCode": 0,
+      "lastUpdate": "初期状態",
+      "ipAddress": "192.168.100.42",
+      "port": 6001,
+      "deviceType": 2,
+      "modeDisplayFlag": 1
+    },
+    {
+      "name": "PTZカメラ-1",
+      "statusCode": 2,
+      "currentValue": "0",
+      "statusDetailCode": 0,
+      "lastUpdate": "初期状態",
+      "ipAddress": "192.168.100.51",
+      "port": 52381,
+      "deviceType": 1,
+      "modeDisplayFlag": 0
+    },
+    {
+      "name": "PTZカメラ-2",
+      "statusCode": 2,
+      "currentValue": "0",
+      "statusDetailCode": 0,
+      "lastUpdate": "初期状態",
+      "ipAddress": "192.168.100.52",
+      "port": 52381,
+      "deviceType": 1,
+      "modeDisplayFlag": 0
+    },
+    {
+      "name": "PTZカメラ-3",
+      "statusCode": 2,
+      "currentValue": "0",
+      "statusDetailCode": 0,
+      "lastUpdate": "初期状態",
+      "ipAddress": "192.168.100.53",
+      "port": 52381,
+      "deviceType": 1,
+      "modeDisplayFlag": 0
+    },
+    {
+      "name": "デジタルミキサー",
+      "statusCode": 2,
+      "currentValue": "0",
+      "statusDetailCode": 0,
+      "lastUpdate": "初期状態",
+      "ipAddress": "192.168.1.105",
+      "port": 6005,
+      "deviceType": 0,
+      "modeDisplayFlag": 0
+    },
+    {
+      "name": "再生機１",
+      "statusCode": 2,
+      "currentValue": "0",
+      "statusDetailCode": 0,
+      "lastUpdate": "初期状態",
+      "ipAddress": "192.168.1.104",
+      "port": 6004,
+      "deviceType": 1,
+      "modeDisplayFlag": 1
+    },
+    {
+      "name": "再生機２",
+      "statusCode": 2,
+      "currentValue": "0",
+      "statusDetailCode": 0,
+      "lastUpdate": "初期状態",
+      "ipAddress": "192.168.1.104",
+      "port": 6004,
+      "deviceType": 1,
+      "modeDisplayFlag": 1
+    },
+    {
+      "name": "再生機３",
+      "statusCode": 2,
+      "currentValue": "0",
+      "statusDetailCode": 0,
+      "lastUpdate": "初期状態",
+      "ipAddress": "192.168.1.104",
+      "port": 6004,
+      "deviceType": 1,
+      "modeDisplayFlag": 1
+    }
+  ]
+}
+

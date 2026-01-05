@@ -1,0 +1,112 @@
+<UserControl x:Class="Shibaura_ControlHub.Views.LightingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             xmlns:conv="clr-namespace:Shibaura_ControlHub.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="1280" d:DesignWidth="1920">
+    <UserControl.Resources>
+        <conv:IntEqualityConverter x:Key="IntEqualityConverter"/>
+        <conv:PresetStateConverter x:Key="PresetStateConverter"/>
+        
+        <!-- 照明プリセットボタン選択状態用スタイル -->
+        <Style x:Key="LightingPresetButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MaxHeight" Value="32"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}"
+                                Height="32"
+                                MinHeight="32"
+                                MaxHeight="32">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#2D2D30"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <!-- 選択されているが呼び出されていない（オレンジ） -->
+                <DataTrigger Value="1">
+                    <DataTrigger.Binding>
+                        <MultiBinding Converter="{StaticResource PresetStateConverter}">
+                            <Binding Path="SelectedLightingPresetNumber"/>
+                            <Binding Path="CalledLightingPresetNumber"/>
+                            <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
+                        </MultiBinding>
+                    </DataTrigger.Binding>
+                    <Setter Property="Background" Value="#F59E0B"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </DataTrigger>
+                <!-- 選択されていて呼び出し済み（濃い青） -->
+                <DataTrigger Value="2">
+                    <DataTrigger.Binding>
+                        <MultiBinding Converter="{StaticResource PresetStateConverter}">
+                            <Binding Path="SelectedLightingPresetNumber"/>
+                            <Binding Path="CalledLightingPresetNumber"/>
+                            <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
+                        </MultiBinding>
+                    </DataTrigger.Binding>
+                    <Setter Property="Background" Value="{StaticResource CalledPresetBrush}"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    <StackPanel Margin="12">
+        <TextBlock Text="照明制御" Style="{StaticResource PageTitleStyle}"/>
+
+        <!-- プリセットセクション -->
+        <StackPanel Margin="0,0,0,20">
+            <TextBlock Text="プリセット" Style="{StaticResource SectionHeaderStyle}"/>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- プリセット選択ボタン -->
+                <UniformGrid Grid.Column="0" Columns="2" Margin="0,0,10,0">
+                    <Button Content="1" Command="{Binding SelectLightingPresetCommand}" CommandParameter="1" Tag="1" Style="{StaticResource LightingPresetButtonStyle}" Margin="2"/>
+                    <Button Content="2" Command="{Binding SelectLightingPresetCommand}" CommandParameter="2" Tag="2" Style="{StaticResource LightingPresetButtonStyle}" Margin="2"/>
+                    <Button Content="3" Command="{Binding SelectLightingPresetCommand}" CommandParameter="3" Tag="3" Style="{StaticResource LightingPresetButtonStyle}" Margin="2"/>
+                    <Button Content="4" Command="{Binding SelectLightingPresetCommand}" CommandParameter="4" Tag="4" Style="{StaticResource LightingPresetButtonStyle}" Margin="2"/>
+                    <Button Content="5" Command="{Binding SelectLightingPresetCommand}" CommandParameter="5" Tag="5" Style="{StaticResource LightingPresetButtonStyle}" Margin="2"/>
+                    <Button Content="6" Command="{Binding SelectLightingPresetCommand}" CommandParameter="6" Tag="6" Style="{StaticResource LightingPresetButtonStyle}" Margin="2"/>
+                    <Button Content="7" Command="{Binding SelectLightingPresetCommand}" CommandParameter="7" Tag="7" Style="{StaticResource LightingPresetButtonStyle}" Margin="2"/>
+                    <Button Content="8" Command="{Binding SelectLightingPresetCommand}" CommandParameter="8" Tag="8" Style="{StaticResource LightingPresetButtonStyle}" Margin="2"/>
+                </UniformGrid>
+
+                <!-- 呼出ボタン -->
+                <Grid Grid.Column="1">
+                    <Button Content="呼出" FontSize="12" FontWeight="Bold" Style="{StaticResource ModernButtonStyle}" 
+                            Command="{Binding CallLightingPresetCommand}" 
+                            Padding="20,12" Margin="2"/>
+                </Grid>
+            </Grid>
+        </StackPanel>
+    </StackPanel>
+</UserControl>
+
