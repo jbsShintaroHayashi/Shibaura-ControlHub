@@ -1,0 +1,55 @@
+<UserControl x:Class="Shibaura_ControlHub.Views.MaintenanceView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             mc:Ignorable="d" 
+             d:DesignHeight="1280" d:DesignWidth="1920">
+    <Grid Background="{StaticResource BackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- ヘッダー: タイトルとメニューに戻るボタン -->
+        <Border Grid.Row="0" 
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="25,20">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="メンテナンス" 
+                               FontSize="20" FontWeight="Bold"
+                               Foreground="{StaticResource PrimaryBrush}"/>
+                </StackPanel>
+                
+                <Button Grid.Column="1"
+                        Content="メニューに戻る"
+                        Command="{Binding ReturnToMenuCommand}"
+                        Style="{StaticResource ModernButtonStyle}"
+                        Padding="20,10"
+                        FontSize="14"
+                        FontWeight="SemiBold"/>
+            </Grid>
+        </Border>
+        
+        <!-- WebView2 -->
+        <Grid Grid.Row="1" Margin="25">
+            <wv2:WebView2 x:Name="WebView2Control"
+                          Source="{Binding WebUrl}"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"/>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -10,8 +10,20 @@ namespace Shibaura_ControlHub.ViewModels
     public class CameraPresetItem : INotifyPropertyChanged
     {
         private bool _isRegistered;
+        private int _number;
 
-        public int Number { get; set; }
+        public int Number
+        {
+            get => _number;
+            set
+            {
+                if (_number != value)
+                {
+                    _number = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
         
         public bool IsRegistered
         {

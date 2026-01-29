@@ -81,10 +81,10 @@
 
         <!-- SmallButton をダーク化 -->
         <Style x:Key="SmallButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="MinHeight" Value="36"/>
-            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="MinHeight" Value="40"/>
+            <Setter Property="Height" Value="40"/>
         </Style>
 
         <!-- ModeButton ダーク -->
@@ -238,5 +238,43 @@
         <conv:IntEqualityConverter x:Key="IntEqualityConverter"/>
         <conv:PresetStateConverter x:Key="PresetStateConverter"/>
         <conv:EqualityConverter x:Key="EqualityConverter"/>
+
+        <!-- 統一プリセットボタンスタイル（ベース） -->
+        <Style x:Key="BasePresetButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="14,9"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="MaxHeight" Value="36"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Margin" Value="6,3,6,3"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}"
+                                Height="36"
+                                MinHeight="36"
+                                MaxHeight="36">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#2D2D30"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Application.Resources>
 </Application>

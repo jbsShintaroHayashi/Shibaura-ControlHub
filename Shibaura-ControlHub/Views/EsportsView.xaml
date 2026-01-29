@@ -11,40 +11,7 @@
         <conv:IntEqualityConverter x:Key="IntEqualityConverter"/>
         <conv:PresetStateConverter x:Key="PresetStateConverter"/>
         <!-- Esportsプリセットボタン選択状態用スタイル -->
-        <Style x:Key="EsportsPresetButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="MinHeight" Value="32"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="MaxHeight" Value="32"/>
-            <Setter Property="VerticalAlignment" Value="Top"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}"
-                                Height="32"
-                                MinHeight="32"
-                                MaxHeight="32">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Background" Value="#2D2D30"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+        <Style x:Key="EsportsPresetButtonStyle" TargetType="Button" BasedOn="{StaticResource BasePresetButtonStyle}">
             <Style.Triggers>
                 <!-- 選択されているが呼び出されていない（オレンジ） -->
                 <DataTrigger Value="1">
@@ -88,46 +55,60 @@
                 </Grid.ColumnDefinitions>
                 
                 <!-- プリセット選択ボタン -->
-                <UniformGrid Grid.Column="0" Columns="2" Margin="0,0,10,0">
+                <UniformGrid Grid.Column="0" Columns="2" Rows="4" Margin="0,0,10,0">
                     <Button Content="1" Tag="1"
                             Command="{Binding SelectEsportsPresetCommand}"
                             CommandParameter="1"
-                            Style="{StaticResource EsportsPresetButtonStyle}" Margin="2"/>
+                            Style="{StaticResource EsportsPresetButtonStyle}"
+                            Margin="6,5,6,5"/>
                     <Button Content="2" Tag="2"
                             Command="{Binding SelectEsportsPresetCommand}"
                             CommandParameter="2"
-                            Style="{StaticResource EsportsPresetButtonStyle}" Margin="2"/>
+                            Style="{StaticResource EsportsPresetButtonStyle}"
+                            Margin="6,5,6,5"/>
                     <Button Content="3" Tag="3"
                             Command="{Binding SelectEsportsPresetCommand}"
                             CommandParameter="3"
-                            Style="{StaticResource EsportsPresetButtonStyle}" Margin="2"/>
+                            Style="{StaticResource EsportsPresetButtonStyle}"
+                            Margin="6,5,6,5"/>
                     <Button Content="4" Tag="4"
                             Command="{Binding SelectEsportsPresetCommand}"
                             CommandParameter="4"
-                            Style="{StaticResource EsportsPresetButtonStyle}" Margin="2"/>
+                            Style="{StaticResource EsportsPresetButtonStyle}"
+                            Margin="6,5,6,5"/>
                     <Button Content="5" Tag="5"
                             Command="{Binding SelectEsportsPresetCommand}"
                             CommandParameter="5"
-                            Style="{StaticResource EsportsPresetButtonStyle}" Margin="2"/>
+                            Style="{StaticResource EsportsPresetButtonStyle}"
+                            Margin="6,5,6,5"/>
                     <Button Content="6" Tag="6"
                             Command="{Binding SelectEsportsPresetCommand}"
                             CommandParameter="6"
-                            Style="{StaticResource EsportsPresetButtonStyle}" Margin="2"/>
+                            Style="{StaticResource EsportsPresetButtonStyle}"
+                            Margin="6,5,6,5"/>
                     <Button Content="7" Tag="7"
                             Command="{Binding SelectEsportsPresetCommand}"
                             CommandParameter="7"
-                            Style="{StaticResource EsportsPresetButtonStyle}" Margin="2"/>
+                            Style="{StaticResource EsportsPresetButtonStyle}"
+                            Margin="6,5,6,0"/>
                     <Button Content="8" Tag="8"
                             Command="{Binding SelectEsportsPresetCommand}"
                             CommandParameter="8"
-                            Style="{StaticResource EsportsPresetButtonStyle}" Margin="2"/>
+                            Style="{StaticResource EsportsPresetButtonStyle}"
+                            Margin="6,5,6,0"/>
                 </UniformGrid>
 
-                <!-- 呼出ボタン -->
-                <Grid Grid.Column="1">
-                    <Button Content="呼出" FontSize="12" FontWeight="Bold" Style="{StaticResource ModernButtonStyle}" 
-                            Command="{Binding CallEsportsPresetCommand}" 
-                            Padding="20,12" Margin="2"/>
+                <!-- 呼出・登録ボタン -->
+                <Grid Grid.Column="1" VerticalAlignment="Top" Margin="0,0,0,0">
+                    <StackPanel VerticalAlignment="Top" Margin="0">
+                        <Button Content="呼出" FontSize="13" FontWeight="Bold" Style="{StaticResource ModernButtonStyle}" 
+                                Command="{Binding CallEsportsPresetCommand}" 
+                                Padding="14,9" Margin="6,5,6,5" Height="82" MinHeight="82" MaxHeight="82" VerticalAlignment="Top" HorizontalAlignment="Stretch"/>
+                        <Button Content="登録" FontSize="13" FontWeight="Bold" Style="{StaticResource ModernButtonStyle}" 
+                                Command="{Binding RegisterEsportsPresetCommand}"
+                                CommandParameter="{Binding SelectedEsportsPresetNumber}"
+                                Padding="14,9" Margin="6,0,6,0" Height="82" MinHeight="82" MaxHeight="82" HorizontalAlignment="Stretch"/>
+                    </StackPanel>
                 </Grid>
             </Grid>
         </StackPanel>
@@ -162,7 +143,7 @@
                 <ItemsControl Grid.Row="0" Grid.Column="1" ItemsSource="{Binding EsportsMatrixColumnLabels}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <UniformGrid Rows="1" Columns="18"/>
+                            <UniformGrid Rows="1" Columns="19"/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
@@ -200,7 +181,7 @@
                 <ItemsControl Grid.Row="1" Grid.Column="1" ItemsSource="{Binding EsportsMatrixButtons}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <UniformGrid Rows="7" Columns="18"/>
+                            <UniformGrid Rows="7" Columns="19"/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>

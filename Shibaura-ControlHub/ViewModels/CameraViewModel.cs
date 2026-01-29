@@ -20,9 +20,9 @@ namespace Shibaura_ControlHub.ViewModels
         private ModeSettingsData? _modeSettingsData;
         private EquipmentStatus? _selectedCamera;
         private int _selectedPresetNumber = 0;
-        private int _selectedAiStillNumber = 0;
         private bool _isTrackingOn = false;
         private bool _isCamera1Selected = false;
+        private bool _isPresetRegisterMode = false;
         private readonly SonyPtzCameraClient _cameraClient;
 
         public ObservableCollection<EquipmentStatus> CameraList { get; set; } = null!;
@@ -44,7 +44,10 @@ namespace Shibaura_ControlHub.ViewModels
                 UpdateIsCamera1Selected();
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsCamera1Selected));
+                BuildCameraPresetsForCurrentMode();
                 LoadCameraPresetsForCurrentMode();
+                LoadCalledPresetNumberForCurrentCamera();
+                LoadSelectedPresetNumberForCurrentCamera();
             }
         }
 
@@ -82,27 +85,6 @@ namespace Shibaura_ControlHub.ViewModels
             }
         }
 
-        public int SelectedAiStillNumber
-        {
-            get => _selectedAiStillNumber;
-            set
-            {
-                _selectedAiStillNumber = value;
-                OnPropertyChanged();
-            }
-        }
-
-        private int _calledAiStillNumber = 0;
-        public int CalledAiStillNumber
-        {
-            get => _calledAiStillNumber;
-            set
-            {
-                _calledAiStillNumber = value;
-                OnPropertyChanged();
-            }
-        }
-
         public bool IsTrackingOn
         {
             get => _isTrackingOn;
@@ -113,12 +95,22 @@ namespace Shibaura_ControlHub.ViewModels
             }
         }
 
+        public bool IsPresetRegisterMode
+        {
+            get => _isPresetRegisterMode;
+            set
+            {
+                if (_isPresetRegisterMode != value)
+                {
+                    _isPresetRegisterMode = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public ICommand SelectCameraCommand { get; private set; } = null!;
         public ICommand SelectPresetCommand { get; private set; } = null!;
-        public ICommand CallPresetCommand { get; private set; } = null!;
-        public ICommand RegisterPresetCommand { get; private set; } = null!;
-        public ICommand SelectAiStillCommand { get; private set; } = null!;
-        public ICommand CallAiStillCommand { get; private set; } = null!;
+        public ICommand TogglePresetRegisterModeCommand { get; private set; } = null!;
         public ICommand ToggleAiTrackingCommand { get; private set; } = null!;
         public ICommand MoveCameraCommand { get; private set; } = null!;
         public ICommand ZoomCameraCommand { get; private set; } = null!;
@@ -130,7 +122,7 @@ namespace Shibaura_ControlHub.ViewModels
             SetCurrentModeFromName(mode);
             
             LoadModeSettings();
-            InitializePresets();
+            BuildCameraPresetsForCurrentMode();
             InitializeCommands();
             
             if (CameraList != null && CameraList.Count > 0)
@@ -165,7 +157,13 @@ namespace Shibaura_ControlHub.ViewModels
             }
             _modeSettingsData = _allModeSettings[modeNumber];
             
-            LoadCameraPresetsForCurrentMode();
+            // トラッキング状態を復元
+            if (_modeSettingsData != null)
+            {
+                IsTrackingOn = _modeSettingsData.IsTrackingOn;
+            }
+            
+            BuildCameraPresetsForCurrentMode();
             
             OnPropertyChanged(nameof(CameraPresets));
             OnPropertyChanged(nameof(SelectedCamera));
@@ -174,16 +172,13 @@ namespace Shibaura_ControlHub.ViewModels
         private void UpdateIsCamera1Selected()
         {
             IsCamera1Selected = Camera1 != null && _selectedCamera != null && _selectedCamera == Camera1;
-        }
+            }
 
         private void InitializeCommands()
         {
             SelectCameraCommand = new RelayCommand<EquipmentStatus>(SelectCamera);
             SelectPresetCommand = new RelayCommand<int>(SelectPreset);
-            CallPresetCommand = new RelayCommand(CallSelectedPreset);
-            RegisterPresetCommand = new RelayCommand(RegisterSelectedPreset);
-            SelectAiStillCommand = new RelayCommand<int>(SelectAiStill);
-            CallAiStillCommand = new RelayCommand(CallSelectedAiStill);
+            TogglePresetRegisterModeCommand = new RelayCommand(TogglePresetRegisterMode);
             ToggleAiTrackingCommand = new RelayCommand<string>(ToggleAiTracking);
             MoveCameraCommand = new RelayCommand<string>(StartMoveCamera);
             ZoomCameraCommand = new RelayCommand<string>(ZoomCamera);
@@ -214,17 +209,25 @@ namespace Shibaura_ControlHub.ViewModels
             if (modeNumber == CurrentMode)
             {
                 _modeSettingsData = _allModeSettings[modeNumber];
+                // トラッキング状態を復元
+                if (_modeSettingsData != null)
+                {
+                    IsTrackingOn = _modeSettingsData.IsTrackingOn;
+                }
             }
         }
 
-        private void InitializePresets()
+        private void BuildCameraPresetsForCurrentMode()
         {
+            int presetOffset = CurrentMode == 3 ? 0 : 8;
+
+            CameraPresets.Clear();
             for (int i = 1; i <= 8; i++)
             {
-                int presetNumber = i;
+                int presetNumber = i + presetOffset;
                 CameraPresets.Add(new CameraPresetItem
                 {
-                    Number = i,
+                    Number = presetNumber,
                     IsRegistered = false,
                     CallCommand = new RelayCommand(() => CallPresetItem(presetNumber)),
                     RegisterCommand = new RelayCommand(() => RegisterPresetItem(presetNumber))
@@ -241,77 +244,27 @@ namespace Shibaura_ControlHub.ViewModels
 
         private void SelectPreset(int presetNumber)
         {
-            ActionLogger.LogAction("プリセット選択", $"プリセット番号: {presetNumber}");
+            if (IsPresetRegisterMode)
+            {
+                ActionLogger.LogAction("プリセット登録モード", $"登録対象プリセット番号: {presetNumber}");
+                SelectedPresetNumber = presetNumber;
+                SaveSelectedPresetNumberForCurrentCamera(presetNumber);
+                IsPresetRegisterMode = false;
+                RegisterPresetItem(presetNumber);
+                return;
+            }
+
+            ActionLogger.LogAction("プリセット呼出", $"プリセット番号: {presetNumber}");
             SelectedPresetNumber = presetNumber;
+            SaveSelectedPresetNumberForCurrentCamera(presetNumber);
+            CallPresetItem(presetNumber);
+            CalledPresetNumber = presetNumber;
+            SaveCalledPresetNumberForCurrentCamera(presetNumber);
         }
 
-        private void CallSelectedPreset()
+        private void TogglePresetRegisterMode()
         {
-            if (SelectedPresetNumber == 0)
-            {
-                ActionLogger.LogError("プリセット呼出", "プリセットが選択されていません");
-                CustomDialog.Show("プリセットが選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var result = CustomDialog.Show(
-                $"プリセット{SelectedPresetNumber}を呼び出しますか？",
-                "プリセット呼出確認",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result != MessageBoxResult.Yes)
-            {
-                return;
-            }
-
-            CallPresetItem(SelectedPresetNumber);
-            CalledPresetNumber = SelectedPresetNumber;
-        }
-
-        private void RegisterSelectedPreset()
-        {
-            if (SelectedPresetNumber == 0)
-            {
-                ActionLogger.LogError("プリセット登録", "プリセットが選択されていません");
-                CustomDialog.Show("プリセットが選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            ActionLogger.LogAction("プリセット登録", $"プリセット番号: {SelectedPresetNumber}");
-            RegisterPresetItem(SelectedPresetNumber);
-        }
-
-        private void SelectAiStill(int stillNumber)
-        {
-            ActionLogger.LogAction("AIスチル選択", $"スチル番号: {stillNumber}");
-            SelectedAiStillNumber = stillNumber;
-        }
-
-        private void CallSelectedAiStill()
-        {
-            if (SelectedAiStillNumber == 0)
-            {
-                ActionLogger.LogError("AIスチル呼出", "スチルが選択されていません");
-                CustomDialog.Show("スチルが選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            if (SelectedCamera == null)
-            {
-                ActionLogger.LogError("AIスチル呼出", "カメラが選択されていません");
-                CustomDialog.Show("カメラが選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            CalledAiStillNumber = SelectedAiStillNumber;
-            
-            CustomDialog.Show(
-                $"スチル{SelectedAiStillNumber}を呼び出しました\n" +
-                $"カメラ: {SelectedCamera.Name}",
-                "スチル呼び出し",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            IsPresetRegisterMode = !IsPresetRegisterMode;
         }
 
         private void ToggleAiTracking(string? state)
@@ -322,7 +275,59 @@ namespace Shibaura_ControlHub.ViewModels
                 return;
             }
 
+            if (SelectedCamera == null)
+            {
+                ActionLogger.LogError("トラッキング切り替え", "カメラが選択されていません");
+                return;
+            }
+
+            int cameraNumber = GetCameraNumber(SelectedCamera);
+            if (cameraNumber != 1)
+            {
+                ActionLogger.LogError("トラッキング切り替え", "トラッキング機能はカメラ1のみで使用できます");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(SelectedCamera.IpAddress))
+            {
+                ActionLogger.LogError("トラッキング切り替え", "カメラのIPアドレスが設定されていません");
+                return;
+            }
+
+            string trackingState = state == "On" ? "on" : "off";
             IsTrackingOn = state == "On";
+
+            // トラッキング状態を保存
+            if (_modeSettingsData != null)
+            {
+                _modeSettingsData.IsTrackingOn = IsTrackingOn;
+                ModeSettingsManager.SaveModeSettings(CurrentMode, _modeSettingsData);
+            }
+
+            var ip = SelectedCamera.IpAddress;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _cameraClient.SetPtzAutoFramingAsync(ip, trackingState, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    ActionLogger.LogError("トラッキング切り替えエラー", 
+                        $"エラー: {ex.GetType().Name} - {ex.Message}\nスタックトレース: {ex.StackTrace}");
+                    
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        IsTrackingOn = !IsTrackingOn;
+                        // エラー時は状態を元に戻して保存
+                        if (_modeSettingsData != null)
+                        {
+                            _modeSettingsData.IsTrackingOn = IsTrackingOn;
+                            ModeSettingsManager.SaveModeSettings(CurrentMode, _modeSettingsData);
+                        }
+                    });
+                }
+            });
         }
 
         private void RegisterPresetItem(int presetNumber)
@@ -357,13 +362,14 @@ namespace Shibaura_ControlHub.ViewModels
                         await _cameraClient.StorePresetAsync(SelectedCamera.IpAddress, presetNumber, $"Preset{presetNumber}", "off", CancellationToken.None);
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            var presetItem = CameraPresets.FirstOrDefault(p => p.Number == presetNumber);
-                            if (presetItem != null)
-                            {
-                                presetItem.IsRegistered = true;
+            var presetItem = CameraPresets.FirstOrDefault(p => p.Number == presetNumber);
+            if (presetItem != null)
+            {
+                presetItem.IsRegistered = true;
                             }
                             // 登録後、呼び出し済み状態に変更
                             CalledPresetNumber = presetNumber;
+                            SaveCalledPresetNumberForCurrentCamera(presetNumber);
                             ActionLogger.LogResult("プリセット登録成功", $"カメラ{cameraNumber}のプリセット{presetNumber}を登録しました");
                         });
                     }
@@ -443,6 +449,7 @@ namespace Shibaura_ControlHub.ViewModels
         public void ClearPresetSelectionOnly()
         {
             SelectedPresetNumber = 0;
+            SaveSelectedPresetNumberForCurrentCamera(0);
         }
 
         private string? _currentMoveDirection = null;
@@ -466,6 +473,8 @@ namespace Shibaura_ControlHub.ViewModels
             // プリセット選択状態と呼び出し済み状態をクリア
             SelectedPresetNumber = 0;
             CalledPresetNumber = 0;
+            SaveSelectedPresetNumberForCurrentCamera(0);
+            SaveCalledPresetNumberForCurrentCamera(0);
 
             if (string.IsNullOrWhiteSpace(SelectedCamera.IpAddress))
             {
@@ -474,6 +483,7 @@ namespace Shibaura_ControlHub.ViewModels
             }
 
             int cameraNumber = GetCameraNumber(SelectedCamera);
+            bool isCamera1 = cameraNumber == 1;
             ActionLogger.LogAction("カメラ移動開始", $"カメラ: {SelectedCamera.Name} (カメラ{cameraNumber}), 方向: {direction}");
             
             var ip = SelectedCamera.IpAddress;
@@ -484,7 +494,7 @@ namespace Shibaura_ControlHub.ViewModels
                 // 停止処理直後は開始を無視（デバウンス処理）
                 var timeSinceLastStop = DateTime.Now - _lastStopTime;
                 if (timeSinceLastStop < _stopDebounceTime)
-                {
+        {
                     return;
                 }
                 
@@ -511,18 +521,18 @@ namespace Shibaura_ControlHub.ViewModels
                 {
                     cancellationToken = _moveCancellationTokenSource?.Token ?? CancellationToken.None;
                     currentDirection = _currentMoveDirection ?? "";
-                }
+            }
 
                 try
                 {
                     // 中央ボタンの場合はホームポジションを呼び出す
                     if (direction == "Center")
-                    {
+        {
                         // キャンセルチェック
                         cancellationToken.ThrowIfCancellationRequested();
                         await _cameraClient.RecallHomePositionAsync(ip, cancellationToken);
-                        return;
-                    }
+                return;
+            }
 
                     // 9方向をAPI仕様に合わせて変換
                     string moveDirection = "";
@@ -559,11 +569,9 @@ namespace Shibaura_ControlHub.ViewModels
 
                        if (!string.IsNullOrEmpty(moveDirection))
                        {
-                           // キャンセルチェック
                            cancellationToken.ThrowIfCancellationRequested();
-                           
-                           // 速度0で移動開始（0を設定するとズーム位置によって速度が変わる）
-                           await _cameraClient.MoveAsync(ip, moveDirection, speed: 0, cancellationToken);
+                           int speed = isCamera1 ? 33 : 0;
+                           await _cameraClient.MoveAsync(ip, moveDirection, speed: speed, cameraNumber: cameraNumber, cancellationToken);
                        }
                 }
                 catch (OperationCanceledException)
@@ -601,9 +609,9 @@ namespace Shibaura_ControlHub.ViewModels
             lock (_moveLock)
             {
                 if (_isStoppingMove)
-                {
-                    return;
-                }
+            {
+                return;
+            }
                 _isStoppingMove = true;
             }
             
@@ -692,6 +700,8 @@ namespace Shibaura_ControlHub.ViewModels
             // プリセット選択状態と呼び出し済み状態をクリア
             SelectedPresetNumber = 0;
             CalledPresetNumber = 0;
+            SaveSelectedPresetNumberForCurrentCamera(0);
+            SaveCalledPresetNumberForCurrentCamera(0);
 
             StopZoom();
 
@@ -701,34 +711,32 @@ namespace Shibaura_ControlHub.ViewModels
             }
 
             if (!string.IsNullOrWhiteSpace(SelectedCamera.IpAddress))
-            {
+                {
                 var ip = SelectedCamera.IpAddress;
+                int cameraNumber = GetCameraNumber(SelectedCamera);
+                bool isCamera1 = cameraNumber == 1;
                 
-                // 既存のズームタスクをキャンセル
                 _zoomCancellationTokenSource?.Cancel();
                 _zoomCancellationTokenSource?.Dispose();
                 _zoomCancellationTokenSource = new CancellationTokenSource();
                 _currentZoomDirection = direction;
 
-                // 非同期処理で実行
                 _ = Task.Run(async () =>
                 {
                     try
                     {
+                        int speed = isCamera1 ? 33 : 0;
                         if (direction == "In")
                         {
-                            // ズームイン開始
-                            await _cameraClient.ZoomAsync(ip, "tele", speed: 0, _zoomCancellationTokenSource.Token);
+                            await _cameraClient.ZoomAsync(ip, "tele", speed: speed, cameraNumber: cameraNumber, _zoomCancellationTokenSource.Token);
                         }
                         else if (direction == "Out")
                         {
-                            // ズームアウト開始
-                            await _cameraClient.ZoomAsync(ip, "wide", speed: 0, _zoomCancellationTokenSource.Token);
-                        }
+                            await _cameraClient.ZoomAsync(ip, "wide", speed: speed, cameraNumber: cameraNumber, _zoomCancellationTokenSource.Token);
+                }
                     }
                     catch (OperationCanceledException)
                     {
-                        // キャンセル時は無視
                     }
                     catch (Exception ex)
                     {
@@ -766,13 +774,13 @@ namespace Shibaura_ControlHub.ViewModels
             if (!string.IsNullOrWhiteSpace(SelectedCamera.IpAddress))
             {
                 var ip = SelectedCamera.IpAddress;
+                int cameraNumber = GetCameraNumber(SelectedCamera);
                 
-                // 停止コマンドを非同期送信
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        await _cameraClient.ZoomStopAsync(ip, CancellationToken.None);
+                        await _cameraClient.ZoomStopAsync(ip, cameraNumber, CancellationToken.None);
                     }
                     catch (Exception ex)
                     {
@@ -810,6 +818,104 @@ namespace Shibaura_ControlHub.ViewModels
             }
 
             return 0;
+        }
+
+        /// <summary>
+        /// 現在のカメラの呼び出し済みプリセット番号を読み込む
+        /// </summary>
+        private void LoadCalledPresetNumberForCurrentCamera()
+        {
+            if (SelectedCamera == null || _modeSettingsData == null || CurrentMode == 0)
+            {
+                CalledPresetNumber = 0;
+                return;
+            }
+
+            if (_modeSettingsData.CameraCalledPresetNumbers == null)
+            {
+                _modeSettingsData.CameraCalledPresetNumbers = new Dictionary<string, int>();
+            }
+
+            string cameraName = SelectedCamera.Name;
+            if (_modeSettingsData.CameraCalledPresetNumbers.TryGetValue(cameraName, out int calledPreset))
+            {
+                CalledPresetNumber = calledPreset;
+            }
+            else
+            {
+                CalledPresetNumber = 0;
+            }
+        }
+
+        /// <summary>
+        /// 現在のカメラの呼び出し済みプリセット番号を保存
+        /// </summary>
+        private void SaveCalledPresetNumberForCurrentCamera(int presetNumber)
+        {
+            if (SelectedCamera == null || _modeSettingsData == null || CurrentMode == 0)
+            {
+                return;
+            }
+
+            if (_modeSettingsData.CameraCalledPresetNumbers == null)
+            {
+                _modeSettingsData.CameraCalledPresetNumbers = new Dictionary<string, int>();
+            }
+
+            string cameraName = SelectedCamera.Name;
+            _modeSettingsData.CameraCalledPresetNumbers[cameraName] = presetNumber;
+
+            // JSONファイルに即座に保存
+            ModeSettingsManager.SaveModeSettings(CurrentMode, _modeSettingsData);
+        }
+
+        /// <summary>
+        /// 現在のカメラの選択中プリセット番号を保存
+        /// </summary>
+        private void SaveSelectedPresetNumberForCurrentCamera(int presetNumber)
+        {
+            if (SelectedCamera == null || _modeSettingsData == null || CurrentMode == 0)
+            {
+                return;
+            }
+
+            if (_modeSettingsData.CameraSelectedPresetNumbers == null)
+            {
+                _modeSettingsData.CameraSelectedPresetNumbers = new Dictionary<string, int>();
+            }
+
+            string cameraName = SelectedCamera.Name;
+            _modeSettingsData.CameraSelectedPresetNumbers[cameraName] = presetNumber;
+
+            // JSONファイルに即座に保存
+            ModeSettingsManager.SaveModeSettings(CurrentMode, _modeSettingsData);
+        }
+
+        /// <summary>
+        /// 現在のカメラの選択中プリセット番号を読み込む
+        /// </summary>
+        private void LoadSelectedPresetNumberForCurrentCamera()
+        {
+            if (SelectedCamera == null || _modeSettingsData == null || CurrentMode == 0)
+            {
+                SelectedPresetNumber = 0;
+                return;
+            }
+
+            if (_modeSettingsData.CameraSelectedPresetNumbers == null)
+            {
+                _modeSettingsData.CameraSelectedPresetNumbers = new Dictionary<string, int>();
+            }
+
+            string cameraName = SelectedCamera.Name;
+            if (_modeSettingsData.CameraSelectedPresetNumbers.TryGetValue(cameraName, out int selectedPreset))
+            {
+                SelectedPresetNumber = selectedPreset;
+            }
+            else
+            {
+                SelectedPresetNumber = 0;
+        }
         }
     }
 }

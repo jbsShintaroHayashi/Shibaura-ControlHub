@@ -1,4 +1,4 @@
-﻿using Shibaura_ControlHub.Services;
+using Shibaura_ControlHub.Services;
 using Shibaura_ControlHub.Models;
 using Shibaura_ControlHub.Services;
 using Shibaura_ControlHub.Utils;
@@ -26,6 +26,9 @@ namespace Shibaura_ControlHub
         private ProgressViewModel _progressViewModel;
         private DispatcherTimer? _progressTimer;
         private ModeControlViewModel _modeControlViewModel;
+        private MaintenanceViewModel? _maintenanceViewModel;
+        private MaintenanceView? _maintenanceView;
+        private bool _isWebView2Initialized = false;
         private ObservableCollection<EquipmentStatus> _microphoneList = new ObservableCollection<EquipmentStatus>();
         private ObservableCollection<EquipmentStatus> _cameraList = new ObservableCollection<EquipmentStatus>();
         private readonly JsonFileService _jsonFileService = new JsonFileService();
@@ -46,7 +49,44 @@ namespace Shibaura_ControlHub
             // JSONファイルから機器データを読み込む
             LoadEquipmentFromJson();
             
+            // ウィンドウが読み込まれたらWebView2を初期化
+            Loaded += MainWindow_Loaded;
+            
             ShowPowerOnView();
+        }
+
+        /// <summary>
+        /// ウィンドウが読み込まれた際にWebView2を1回だけ初期化
+        /// </summary>
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (!_isWebView2Initialized)
+            {
+                await InitializeWebView2Async();
+            }
+        }
+
+        /// <summary>
+        /// WebView2をアプリ起動時に1回だけ初期化
+        /// </summary>
+        private async System.Threading.Tasks.Task InitializeWebView2Async()
+        {
+            if (_isWebView2Initialized)
+            {
+                return;
+            }
+
+            try
+            {
+                // MaintenanceViewを作成して初期化
+                _maintenanceView = new MaintenanceView();
+                await _maintenanceView.InitializeWebView2Async();
+                _isWebView2Initialized = true;
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"WebView2の初期化に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void Init()
@@ -164,6 +204,11 @@ namespace Shibaura_ControlHub
                     ShowPowerOnView();
                 });
             };
+
+            _menuViewModel.MaintenanceRequested += () =>
+            {
+                ShowMaintenanceView();
+            };
         }
 
         private void ShowProgressView(string message, Action? onCompleted = null)
@@ -183,9 +228,12 @@ namespace Shibaura_ControlHub
             };
             CurrentView.Content = new ProgressView { DataContext = _progressViewModel };
 
+            // config.ini の [Progress] DurationSeconds で指定した秒数で100%に到達するよう間隔を計算（100を時間で割った間隔で1%ずつ進める）
+            var durationSeconds = Math.Clamp(App.ModeConfig.ProgressDurationSeconds, 1, 120);
+            var intervalMs = (durationSeconds * 1000.0) / 100.0;
             _progressTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(20) // 20msごとに更新（2秒で100%）
+                Interval = TimeSpan.FromMilliseconds(intervalMs)
             };
 
             double currentProgress = 0;
@@ -261,6 +309,52 @@ namespace Shibaura_ControlHub
             CurrentView.Content = modeControlView;
         }
 
+        /// <summary>
+        /// メンテナンス画面を表示
+        /// </summary>
+        private void ShowMaintenanceView()
+        {
+            // 既存のMaintenanceViewを再利用（再生成しない）
+            // 初期化はアプリ起動時に完了しているはず
+            if (_maintenanceView == null)
+            {
+                // 初期化がまだ完了していない場合は待機（通常は発生しない）
+                if (!_isWebView2Initialized)
+                {
+                    // 同期的に初期化を待つ
+                    InitializeWebView2Async().GetAwaiter().GetResult();
+                }
+                
+                // 初期化後もnullの場合は再作成（通常は発生しない）
+                if (_maintenanceView == null)
+                {
+                    _maintenanceView = new MaintenanceView();
+                    if (!_isWebView2Initialized)
+                    {
+                        _maintenanceView.InitializeWebView2Async().GetAwaiter().GetResult();
+                        _isWebView2Initialized = true;
+                    }
+                }
+            }
+
+            _maintenanceViewModel = new MaintenanceViewModel();
+            if (_maintenanceView != null)
+            {
+                _maintenanceView.DataContext = _maintenanceViewModel;
+            }
+
+            _maintenanceViewModel.ReturnToMenu += () =>
+            {
+                // メニューに戻る際はDisposeしない（再利用のため）
+                ShowMenuView();
+            };
+
+            if (_maintenanceView != null)
+            {
+                CurrentView.Content = _maintenanceView;
+            }
+        }
+
         private void HandleRemoteModeStart(string modeName)
         {
             StartModeWithProgress(modeName);
@@ -279,6 +373,23 @@ namespace Shibaura_ControlHub
             }
 
             return string.Equals(_currentModeName, modeName, StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// ウィンドウが閉じられる際にWebView2をDisposeしてプロセスを終了させる
+        /// </summary>
+        protected override void OnClosed(EventArgs e)
+        {
+            // メンテナンスViewのリソースをクリーンアップ
+            _maintenanceView?.Dispose();
+            _maintenanceView = null;
+
+            // その他のリソースのクリーンアップ
+            _receiver?.Stop();
+            _receiver?.Dispose();
+            _progressTimer?.Stop();
+
+            base.OnClosed(e);
         }
     }
 }

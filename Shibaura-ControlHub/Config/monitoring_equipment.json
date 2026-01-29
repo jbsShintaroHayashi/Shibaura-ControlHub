@@ -6,7 +6,7 @@
       "currentValue": "0",
       "statusDetailCode": 0,
       "lastUpdate": "初期状態",
-      "ipAddress": "192.168.100.41",
+      "ipAddress": "192.168.0.41",
       "port": 6000,
       "deviceType": 2,
       "modeDisplayFlag": 0
@@ -17,8 +17,8 @@
       "currentValue": "0",
       "statusDetailCode": 0,
       "lastUpdate": "初期状態",
-      "ipAddress": "192.168.1.100",
-      "port": 6000,
+      "ipAddress": "192.168.0.11",
+      "port": 10055,
       "deviceType": 2,
       "modeDisplayFlag": 0
     },
@@ -28,7 +28,7 @@
       "currentValue": "0",
       "statusDetailCode": 0,
       "lastUpdate": "初期状態",
-      "ipAddress": "192.168.100.42",
+      "ipAddress": "192.168.0.42",
       "port": 6001,
       "deviceType": 2,
       "modeDisplayFlag": 1
@@ -39,7 +39,7 @@
       "currentValue": "0",
       "statusDetailCode": 0,
       "lastUpdate": "初期状態",
-      "ipAddress": "192.168.100.51",
+      "ipAddress": "192.168.0.51",
       "port": 52381,
       "deviceType": 1,
       "modeDisplayFlag": 0
@@ -50,7 +50,7 @@
       "currentValue": "0",
       "statusDetailCode": 0,
       "lastUpdate": "初期状態",
-      "ipAddress": "192.168.100.52",
+      "ipAddress": "192.168.0.52",
       "port": 52381,
       "deviceType": 1,
       "modeDisplayFlag": 0
@@ -61,7 +61,7 @@
       "currentValue": "0",
       "statusDetailCode": 0,
       "lastUpdate": "初期状態",
-      "ipAddress": "192.168.100.53",
+      "ipAddress": "192.168.0.53",
       "port": 52381,
       "deviceType": 1,
       "modeDisplayFlag": 0
@@ -78,34 +78,45 @@
       "modeDisplayFlag": 0
     },
     {
-      "name": "再生機１",
+      "name": "録画機(1)",
       "statusCode": 2,
       "currentValue": "0",
       "statusDetailCode": 0,
       "lastUpdate": "初期状態",
-      "ipAddress": "192.168.1.104",
+      "ipAddress": "192.168.0.61",
       "port": 6004,
       "deviceType": 1,
       "modeDisplayFlag": 1
     },
     {
-      "name": "再生機２",
+      "name": "録画機(2)",
       "statusCode": 2,
       "currentValue": "0",
       "statusDetailCode": 0,
       "lastUpdate": "初期状態",
-      "ipAddress": "192.168.1.104",
+      "ipAddress": "192.168.0.62",
       "port": 6004,
       "deviceType": 1,
       "modeDisplayFlag": 1
     },
     {
-      "name": "再生機３",
+      "name": "再生機(1)",
       "statusCode": 2,
       "currentValue": "0",
       "statusDetailCode": 0,
       "lastUpdate": "初期状態",
-      "ipAddress": "192.168.1.104",
+      "ipAddress": "192.168.0.71",
+      "port": 6004,
+      "deviceType": 1,
+      "modeDisplayFlag": 1
+    },
+    {
+      "name": "再生機(2)",
+      "statusCode": 2,
+      "currentValue": "0",
+      "statusDetailCode": 0,
+      "lastUpdate": "初期状態",
+      "ipAddress": "192.168.0.72",
       "port": 6004,
       "deviceType": 1,
       "modeDisplayFlag": 1

@@ -105,6 +105,9 @@ namespace Shibaura_ControlHub.Services
                 Mode3Name = GetValue("ModeConfig", "Mode3_Name", "e-sports")
             };
 
+            var durationStr = GetValue("Progress", "DurationSeconds", "2");
+            config.ProgressDurationSeconds = int.TryParse(durationStr, out var sec) && sec >= 1 && sec <= 120 ? sec : 2;
+
             return config;
         }
 

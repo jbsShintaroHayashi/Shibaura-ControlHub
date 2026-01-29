@@ -7,6 +7,8 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using Shibaura_ControlHub.Models;
 using Shibaura_ControlHub;
+using Shibaura_ControlHub.Services;
+using Shibaura_ControlHub.Utils;
 using Shibaura_ControlHub.Views;
 using WpfApplication = System.Windows.Application;
 
@@ -47,6 +49,7 @@ namespace Shibaura_ControlHub.ViewModels
         public ICommand Mode3Command { get; }
         public ICommand HiddenButtonCommand { get; }
         public ICommand PowerOffCommand { get; }
+        public ICommand MaintenanceCommand { get; }
 
         /// <summary>
         /// モード1の名前（XAMLバインディング用）
@@ -65,6 +68,7 @@ namespace Shibaura_ControlHub.ViewModels
 
         public event Action<string>? ModeSelected;
         public event Action? PowerOffRequested;
+        public event Action? MaintenanceRequested;
 
         public MenuViewModel(ObservableCollection<EquipmentStatus> equipmentList)
         {
@@ -82,6 +86,7 @@ namespace Shibaura_ControlHub.ViewModels
             Mode3Command = new RelayCommand(() => SelectModeWithConfirmation(App.ModeConfig.Mode3Name));
             HiddenButtonCommand = new RelayCommand<string>(obj => HandleHiddenButtonClick(obj ?? string.Empty));
             PowerOffCommand = new RelayCommand(() => RequestPowerOff());
+            MaintenanceCommand = new RelayCommand(() => MaintenanceRequested?.Invoke());
         }
 
         private void RequestPowerOff()
@@ -94,7 +99,8 @@ namespace Shibaura_ControlHub.ViewModels
         }
 
         /// <summary>
-        /// モード選択時の確認ダイアログを表示してからモードを選択
+        /// モード選択時の確認ダイアログを表示してからモードを選択。
+        /// ダイアログで「はい」を押した直後にモード切替TCPコマンドをDSPへ送信し、その後画面遷移する。
         /// </summary>
         private void SelectModeWithConfirmation(string modeName)
         {
@@ -106,6 +112,12 @@ namespace Shibaura_ControlHub.ViewModels
 
             if (result == MessageBoxResult.Yes)
             {
+                var modeNumber = ModeSettingsManager.GetModeNumber(modeName);
+                if (modeNumber >= 1 && modeNumber <= 3)
+                {
+                    var tcpService = new TcpCommunicationService();
+                    _ = tcpService.SendModeSwitchCommandToDspAsync(modeNumber, EquipmentList);
+                }
                 ModeSelected?.Invoke(modeName);
             }
         }

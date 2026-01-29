@@ -91,22 +91,18 @@ namespace Shibaura_ControlHub.Services
 
                 // ATEMクライアントの作成と接続（非同期）
                 var client = new AtemSwitcherClient();
-                
+
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        // 接続タイムアウトを設定
                         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
-
-                        // ATEMスイッチャーに接続
                         await client.ConnectAsync(ipAddress, cts.Token).ConfigureAwait(false);
 
-                        ActionLogger.LogResult("ATEM接続成功", 
+                        ActionLogger.LogResult("ATEM接続成功",
                             $"ATEMスイッチャーに接続しました: {ipAddress}:{port} (スイッチャー名: {targetSwitcher.Name})");
                         ActionLogger.LogProcessingComplete("スイッチャー接続");
 
-                        // UIスレッドでコールバックを実行
                         dispatcher.Invoke(() =>
                         {
                             try
@@ -116,21 +112,21 @@ namespace Shibaura_ControlHub.Services
                             }
                             catch (Exception ex)
                             {
-                                ActionLogger.LogError("ATEMクライアント設定エラー", 
+                                ActionLogger.LogError("ATEMクライアント設定エラー",
                                     $"コールバック実行中にエラーが発生しました: {ex.Message}");
                             }
                         });
                     }
                     catch (OperationCanceledException)
                     {
-                        ActionLogger.LogError("ATEM接続失敗", 
+                        ActionLogger.LogError("ATEM接続失敗",
                             $"接続タイムアウト: {ipAddress} への接続が{timeoutSeconds}秒以内に完了しませんでした");
                     }
                 }).ContinueWith(task =>
                 {
                     if (task.IsFaulted && task.Exception != null)
                     {
-                        var exceptionMessage = string.Join("; ", 
+                        var exceptionMessage = string.Join("; ",
                             task.Exception.Flatten().InnerExceptions.Select(e => e.Message));
                         ActionLogger.LogError("ATEM接続タスク失敗", $"タスク例外: {exceptionMessage}");
                     }

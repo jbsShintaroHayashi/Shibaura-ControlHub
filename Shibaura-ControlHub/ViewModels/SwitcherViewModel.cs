@@ -25,12 +25,12 @@ namespace Shibaura_ControlHub.ViewModels
     {
         private readonly Dictionary<int, ModeSettingsData> _allModeSettings = new Dictionary<int, ModeSettingsData>();
         private ModeSettingsData? _modeSettingsData;
-        // UDP送信用サービスを削除し、ATEMクライアントへ切替
         private IAtemSwitcherClient? _atemClient;
         private readonly IAtemSwitcherClient _atemSwitcherClient;
         private string? _atemIpAddress;
         private bool _isAtemConnected = false;
-        
+        private SwitcherMatrixDef? _currentMatrixDef;
+
         private int _selectedSwitcherPresetNumber = 0;
 
         public ObservableCollection<EquipmentStatus> SwitcherList { get; set; }
@@ -94,6 +94,7 @@ namespace Shibaura_ControlHub.ViewModels
         // Commands
         public ICommand SelectSwitcherPresetCommand { get; private set; } = null!;
         public ICommand CallSwitcherPresetCommand { get; private set; } = null!;
+        public ICommand RegisterSwitcherPresetCommand { get; private set; } = null!;
         public ICommand SelectSwitcherMatrixCommand { get; private set; } = null!;
 
         public SwitcherViewModel(string mode, ObservableCollection<EquipmentStatus> switcherList)
@@ -133,6 +134,14 @@ namespace Shibaura_ControlHub.ViewModels
             OnPropertyChanged(nameof(SwitcherMatrixRowLabels));
             OnPropertyChanged(nameof(SwitcherMatrixColumnLabels));
             OnPropertyChanged(nameof(SwitcherMatrixColumnCount));
+
+            // モード変更に合わせて、復元された選択状態（出力/AUXルーティング）をATEMへ再送して「出力を呼び出す」
+            if (_atemClient != null)
+            {
+                string modeName = ModeSettingsManager.GetModeName(CurrentMode);
+                ActionLogger.LogProcessing("ATEMルーティング送信", $"モード変更に伴い現在の選択状態をATEMに適用します (モード: {modeName})");
+                SendCurrentSelectionToAtem();
+            }
         }
 
         /// <summary>
@@ -142,6 +151,7 @@ namespace Shibaura_ControlHub.ViewModels
         {
             SelectSwitcherPresetCommand = new RelayCommand<int>(SelectSwitcherPreset);
             CallSwitcherPresetCommand = new RelayCommand(CallSwitcherPreset);
+            RegisterSwitcherPresetCommand = new RelayCommand<int>(RegisterSwitcherPreset);
             SelectSwitcherMatrixCommand = new RelayCommand<EsportsMatrixButton>(SelectSwitcherMatrix);
         }
 
@@ -191,69 +201,33 @@ namespace Shibaura_ControlHub.ViewModels
         }
 
         /// <summary>
-        /// スイッチャーマトリクスを初期化（モードごとに異なる）
+        /// スイッチャーマトリクスを初期化（モードごとの定義を SwitcherDefinitions から取得）
         /// </summary>
         private void InitializeSwitcherMatrix()
         {
             string modeName = ModeSettingsManager.GetModeName(CurrentMode);
             ActionLogger.LogProcessingStart("スイッチャーマトリクス初期化", $"モード: {modeName}");
-            
+
+            var matrixId = CurrentMode == 3 ? SwitcherDefinitions.MatrixIdSwitcherEsports : SwitcherDefinitions.MatrixIdSwitcherRemote;
+            var def = SwitcherDefinitions.GetMatrix(matrixId);
+            if (def == null)
+            {
+                ActionLogger.LogError("スイッチャーマトリクス初期化", $"マトリクス定義が見つかりません: {matrixId}");
+                return;
+            }
+
+            _currentMatrixDef = def;
             SwitcherMatrixButtons.Clear();
             SwitcherMatrixRowLabels.Clear();
             SwitcherMatrixColumnLabels.Clear();
-            
-            int rowCount;
-            int columnCount;
-            
-            if (CurrentMode == 3)
-            {
-                ActionLogger.LogProcessing("マトリクス設定", "eスポーツモード用のマトリクスを設定中");
-                // eスポーツモード: 行ラベル（出力デバイス）
-                SwitcherMatrixRowLabels.Add("大型LED1");
-                SwitcherMatrixRowLabels.Add("100型モニタ1");
-                SwitcherMatrixRowLabels.Add("100型モニタ2");
-                SwitcherMatrixRowLabels.Add("100型モニタ3");
-                SwitcherMatrixRowLabels.Add("100型モニタ4");
-                
-                // eスポーツモード: 列ラベル（入力ソース）- 9列
-                SwitcherMatrixColumnLabels.Add("PGM");
-                SwitcherMatrixColumnLabels.Add("CLN");
-                SwitcherMatrixColumnLabels.Add("Cam1");
-                SwitcherMatrixColumnLabels.Add("Cam2");
-                SwitcherMatrixColumnLabels.Add("Cam3");
-                SwitcherMatrixColumnLabels.Add("HCam1");
-                SwitcherMatrixColumnLabels.Add("HCam2");
-                SwitcherMatrixColumnLabels.Add("オフ");
-                
-                rowCount = 5;
-                columnCount = 8;
-            }
-            else
-            {
-                // 遠隔モード: 行ラベル（出力デバイス）
-                SwitcherMatrixRowLabels.Add("大型LED1");
-                SwitcherMatrixRowLabels.Add("100型モニタ1");
-                SwitcherMatrixRowLabels.Add("100型モニタ2");
-                SwitcherMatrixRowLabels.Add("100型モニタ3");
-                SwitcherMatrixRowLabels.Add("100型モニタ4");
 
-                // 遠隔モード: 列ラベル（入力ソース）- 11列
-                SwitcherMatrixColumnLabels.Add("PGM");
-                SwitcherMatrixColumnLabels.Add("CLN");
-                SwitcherMatrixColumnLabels.Add("Cam1");
-                SwitcherMatrixColumnLabels.Add("Cam2");
-                SwitcherMatrixColumnLabels.Add("Cam3");
-                SwitcherMatrixColumnLabels.Add("HCam1");
-                SwitcherMatrixColumnLabels.Add("HCam2");
-                SwitcherMatrixColumnLabels.Add("講師");
-                SwitcherMatrixColumnLabels.Add("PcA");
-                SwitcherMatrixColumnLabels.Add("PcB");
-                SwitcherMatrixColumnLabels.Add("オフ");
-                
-                rowCount = 5;
-                columnCount = 11;
-            }
-            // 行数×列数のマトリクスを生成
+            foreach (var o in def.Outputs)
+                SwitcherMatrixRowLabels.Add(o.Label);
+            foreach (var i in def.Inputs)
+                SwitcherMatrixColumnLabels.Add(i.Label);
+
+            int rowCount = def.RowCount;
+            int columnCount = def.ColumnCount;
             ActionLogger.LogProcessing("マトリクス生成", $"{rowCount}行×{columnCount}列のマトリクスを生成中");
             for (int row = 1; row <= rowCount; row++)
             {
@@ -268,11 +242,8 @@ namespace Shibaura_ControlHub.ViewModels
                     });
                 }
             }
-            
-            // 保存された選択状態を読み込み
-            ActionLogger.LogProcessing("保存された選択状態の読み込み", "選択状態を読み込み中");
+
             LoadSwitcherMatrixSelectionForCurrentMode();
-            
             ActionLogger.LogResult("スイッチャーマトリクス初期化完了", $"行数: {rowCount}, 列数: {columnCount}");
             ActionLogger.LogProcessingComplete("スイッチャーマトリクス初期化");
         }
@@ -293,6 +264,63 @@ namespace Shibaura_ControlHub.ViewModels
                 // JSONファイルに即座に保存
                 ModeSettingsManager.SaveModeSettings(CurrentMode, _modeSettingsData);
             }
+        }
+
+        /// <summary>
+        /// スイッチャープリセットを登録
+        /// </summary>
+        private void RegisterSwitcherPreset(int presetNumber)
+        {
+            if (presetNumber <= 0 || presetNumber > 8)
+            {
+                ActionLogger.LogError("スイッチャープリセット登録", $"無効なプリセット番号: {presetNumber}");
+                return;
+            }
+
+            var result = CustomDialog.Show(
+                $"プリセット{presetNumber}を登録しますか？\n現在のマトリクス選択状態を保存します。",
+                "プリセット登録確認",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            ActionLogger.LogAction("スイッチャープリセット登録", $"プリセット番号: {presetNumber}");
+
+            if (_modeSettingsData == null)
+            {
+                ActionLogger.LogError("スイッチャープリセット登録", "設定データが無効です");
+                return;
+            }
+
+            // 現在のマトリクス選択状態を取得
+            var currentSelection = GetCurrentPresetSelection();
+
+            if (currentSelection.Count == 0)
+            {
+                ActionLogger.LogError("スイッチャープリセット登録", "マトリクスが選択されていません");
+                CustomDialog.Show("マトリクスが選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // SwitcherPresetsを初期化
+            EnsureSwitcherPresetData(_modeSettingsData);
+
+            // プリセットに現在の選択状態を保存
+            _modeSettingsData.SwitcherPresets[presetNumber] = new Dictionary<int, int>(currentSelection);
+
+            // JSONファイルに即座に保存
+            ModeSettingsManager.SaveModeSettings(CurrentMode, _modeSettingsData);
+
+            // 登録後、呼び出し済み状態に変更
+            CalledSwitcherPresetNumber = presetNumber;
+            SelectedSwitcherPresetNumber = presetNumber;
+
+            LogPresetSelectionDetail("スイッチャープリセット登録完了", currentSelection);
+            ActionLogger.LogResult("スイッチャープリセット登録成功", $"プリセット{presetNumber}を登録しました");
         }
 
         /// <summary>
@@ -450,9 +478,17 @@ namespace Shibaura_ControlHub.ViewModels
                 {
                     try
                     {
-                        // UIは1ベース、ATEMのauxIndexは0ベース
-                        await _atemClient.RouteAuxAsync(b.Row - 1, b.Column, CancellationToken.None);
-                        ActionLogger.LogAction("ATEMルーティング送信", $"AUX {b.Row} -> Input {b.Column}");
+                        var auxIndex = GetAtemAuxIndexFromRow(b.Row);
+                        var inputIndex = GetAtemInputIndexFromColumn(b.Column);
+
+                        if (auxIndex == null || inputIndex == null)
+                        {
+                            continue;
+                        }
+
+                        // auxIndexは0ベース、inputIndexは1ベース（SwitcherDefinitions の定義から取得）
+                        await _atemClient.RouteAuxAsync(auxIndex.Value, inputIndex.Value, CancellationToken.None);
+                        ActionLogger.LogAction("ATEMルーティング送信", $"Row{b.Row} -> Col{b.Column} (AUX{auxIndex.Value + 1} -> Input{inputIndex.Value})");
                     }
                     catch (Exception ex)
                     {
@@ -539,8 +575,8 @@ namespace Shibaura_ControlHub.ViewModels
             }
 
             const int presetCount = 8;
-            int rowCount = CurrentMode == 3 ? 9 : 9;
-            int columnCount = CurrentMode == 3 ? 8 : 11;
+            int rowCount = CurrentMode == 3 ? 8 : 8;
+            int columnCount = CurrentMode == 3 ? 11 : 11;
 
             for (int preset = 1; preset <= presetCount; preset++)
             {
@@ -651,87 +687,79 @@ namespace Shibaura_ControlHub.ViewModels
         }
 
         /// <summary>
-        /// 列ラベルをAtemの入力インデックスに変換
+        /// 列をATEM入力番号（1始まり）に変換。定義ベース。
         /// </summary>
         private int? GetAtemInputIndexFromColumn(int column)
         {
-            if (column < 1 || column > SwitcherMatrixColumnLabels.Count)
-            {
+            if (_currentMatrixDef == null || column < 1 || column > _currentMatrixDef.Inputs.Count)
                 return null;
-            }
-
-            var columnLabel = SwitcherMatrixColumnLabels[column - 1];
-            
-            // 列ラベルとAtem入力インデックスのマッピング
-            return columnLabel switch
-            {
-                "PGM" => 1,
-                "CLN" => 2,
-                "Cam1" => 3,
-                "Cam2" => 4,
-                "Cam3" => 5,
-                "HCam1" => 6,
-                "HCam2" => 7,
-                "講師" => 8,
-                "PcA" => 9,
-                "PcB" => 10,
-                "オフ" => null, // オフの場合は送信しない
-                _ => null
-            };
+            return _currentMatrixDef.Inputs[column - 1].InputIndex1Based;
         }
 
         /// <summary>
-        /// 行ラベルをAtemのAUXインデックスに変換（0ベース）
+        /// 行をATEM AUX番号（0始まり）に変換。定義ベース。
         /// </summary>
         private int? GetAtemAuxIndexFromRow(int row)
         {
-            if (row < 1 || row > SwitcherMatrixRowLabels.Count)
-            {
+            if (_currentMatrixDef == null || row < 1 || row > _currentMatrixDef.Outputs.Count)
                 return null;
-            }
-
-            // 行は1ベース、AUXは0ベースなので row - 1 を返す
-            // 大型LED1 = AUX 0, 100型モニタ1 = AUX 1, ...
-            return row - 1;
+            return _currentMatrixDef.Outputs[row - 1].AuxIndex0Based;
         }
 
         /// <summary>
-        /// スイッチャーマトリクス操作をAtemに送信
+        /// スイッチャー画面のマトリクス選択をATEMに送信（現在のマトリクス定義を使用）
         /// </summary>
-        private async void SendSwitcherMatrixToAtem(int row, int column)
+        private void SendSwitcherMatrixToAtem(int row, int column)
         {
-            if (!_isAtemConnected || string.IsNullOrEmpty(_atemIpAddress))
+            RouteToAtem(row, column, matrixId: null);
+        }
+
+        /// <summary>
+        /// ATEMへルーティング（AUX出力→入力）を送信する。呼び出し元はスイッチャー画面と録画画面の2箇所。
+        /// matrixId を指定するとそのマトリクス定義を使用、null のときは現在のスイッチャーマトリクス定義を使用。
+        /// </summary>
+        public void RouteToAtem(int row, int column, string? matrixId)
+        {
+            if (!_isAtemConnected || _atemClient == null)
             {
                 ActionLogger.LogProcessing("Atem送信スキップ", "Atemに接続されていないため送信をスキップします");
                 return;
             }
 
-            var auxIndex = GetAtemAuxIndexFromRow(row);
-            var inputIndex = GetAtemInputIndexFromColumn(column);
+            var def = matrixId != null ? SwitcherDefinitions.GetMatrix(matrixId) : _currentMatrixDef;
+            if (def == null)
+            {
+                ActionLogger.LogError("Atem送信", $"マトリクス定義が見つかりません: {matrixId ?? "現在"}");
+                return;
+            }
 
-            if (auxIndex == null)
+            if (row < 1 || row > def.Outputs.Count)
             {
                 ActionLogger.LogError("Atem送信", $"無効な行番号: {row}");
                 return;
             }
-
-            if (inputIndex == null)
+            if (column < 1 || column > def.Inputs.Count)
             {
-                // オフの場合は送信しない
-                ActionLogger.LogProcessing("Atem送信スキップ", $"列{column}は「オフ」のため送信をスキップします");
+                ActionLogger.LogProcessing("Atem送信スキップ", $"列{column}は範囲外のため送信をスキップします");
                 return;
             }
 
-            try
+            int auxIndex = def.Outputs[row - 1].AuxIndex0Based;
+            int inputIndex = def.Inputs[column - 1].InputIndex1Based;
+
+            _ = Task.Run(async () =>
             {
-                ActionLogger.LogProcessing("Atem送信", $"AUX{auxIndex}に入力{inputIndex}をルーティング");
-                await _atemSwitcherClient.RouteAuxAsync(auxIndex.Value, inputIndex.Value, CancellationToken.None);
-                ActionLogger.LogResult("Atem送信成功", $"AUX{auxIndex}に入力{inputIndex}をルーティングしました");
-            }
-            catch (Exception ex)
-            {
-                ActionLogger.LogError("Atem送信エラー", $"AUX{auxIndex}に入力{inputIndex}をルーティング中にエラー: {ex.Message}");
-            }
+                try
+                {
+                    ActionLogger.LogProcessing("Atem送信", $"AUX{auxIndex + 1}に入力{inputIndex}をルーティング");
+                    await _atemClient.RouteAuxAsync(auxIndex, inputIndex, CancellationToken.None);
+                    ActionLogger.LogResult("Atem送信成功", $"AUX{auxIndex + 1}に入力{inputIndex}をルーティングしました");
+                }
+                catch (Exception ex)
+                {
+                    ActionLogger.LogError("Atem送信エラー", $"AUX{auxIndex + 1}に入力{inputIndex}をルーティング中にエラー: {ex.Message}");
+                }
+            });
         }
     }
 }

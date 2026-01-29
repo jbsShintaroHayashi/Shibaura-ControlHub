@@ -84,6 +84,11 @@ namespace Shibaura_ControlHub.Models
         /// モード3で照明制御が利用可能か
         /// </summary>
         public bool Mode3LightingAvailable => true;
+
+        /// <summary>
+        /// プログレスバーが0%から100%まで到達するまでの時間（秒）
+        /// </summary>
+        public int ProgressDurationSeconds { get; set; } = 2;
     }
 }
 

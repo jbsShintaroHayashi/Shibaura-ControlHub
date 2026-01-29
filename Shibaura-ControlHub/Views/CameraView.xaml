@@ -13,79 +13,17 @@
         <conv:IntEqualityConverter x:Key="IntEqualityConverter"/>
         <conv:PresetStateConverter x:Key="PresetStateConverter"/>
         <conv:EqualityConverter x:Key="EqualityConverter"/>
-
-        <!-- プリセットボタン選択状態用スタイル（データテンプレート用） -->
-        <Style x:Key="PresetButtonStyle" TargetType="Button" BasedOn="{StaticResource SmallButtonStyle}">
-            <Setter Property="FontSize" Value="12"/>
+        
+        <!-- トラッキングボタンスタイル -->
+        <Style x:Key="TrackingButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
             <Style.Triggers>
-                <!-- 選択されているが呼び出されていない（オレンジ） -->
-                <DataTrigger Value="1">
-                    <DataTrigger.Binding>
-                        <MultiBinding Converter="{StaticResource PresetStateConverter}">
-                            <Binding Path="SelectedPresetNumber"/>
-                            <Binding Path="CalledPresetNumber"/>
-                            <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
-                        </MultiBinding>
-                    </DataTrigger.Binding>
-                    <Setter Property="Background" Value="#F59E0B"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </DataTrigger>
-                <!-- 選択されていて呼び出し済み（濃い青） -->
-                <DataTrigger Value="2">
-                    <DataTrigger.Binding>
-                        <MultiBinding Converter="{StaticResource PresetStateConverter}">
-                            <Binding Path="SelectedPresetNumber"/>
-                            <Binding Path="CalledPresetNumber"/>
-                            <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
-                        </MultiBinding>
-                    </DataTrigger.Binding>
+                <DataTrigger Binding="{Binding IsTrackingOn}" Value="True">
                     <Setter Property="Background" Value="{StaticResource CalledPresetBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-
-        <!-- スチルボタン選択状態用スタイル -->
-        <Style x:Key="StillButtonStyle" TargetType="Button" BasedOn="{StaticResource SmallButtonStyle}">
-            <Setter Property="FontSize" Value="12"/>
-            <Style.Triggers>
-                <!-- 選択されているが呼び出されていない（オレンジ） -->
-                <DataTrigger Value="1">
-                    <DataTrigger.Binding>
-                        <MultiBinding Converter="{StaticResource PresetStateConverter}">
-                            <Binding Path="SelectedAiStillNumber"/>
-                            <Binding Path="CalledAiStillNumber"/>
-                            <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
-                        </MultiBinding>
-                    </DataTrigger.Binding>
-                    <Setter Property="Background" Value="#F59E0B"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </DataTrigger>
-                <!-- 選択されていて呼び出し済み（濃い青） -->
-                <DataTrigger Value="2">
-                    <DataTrigger.Binding>
-                        <MultiBinding Converter="{StaticResource PresetStateConverter}">
-                            <Binding Path="SelectedAiStillNumber"/>
-                            <Binding Path="CalledAiStillNumber"/>
-                            <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
-                        </MultiBinding>
-                    </DataTrigger.Binding>
-                    <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- トラッキングボタンスタイル -->
-        <Style x:Key="TrackingButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsTrackingOn}" Value="True">
-                    <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
+        
         <!-- カメラ選択ボタンスタイル（カメラ1用） -->
         <Style x:Key="Camera1SelectButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
             <Style.Triggers>
@@ -104,7 +42,7 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-
+        
         <!-- カメラ選択ボタンスタイル（カメラ2用） -->
         <Style x:Key="Camera2SelectButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
             <Style.Triggers>
@@ -123,7 +61,7 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-
+        
         <!-- カメラ選択ボタンスタイル（カメラ3用） -->
         <Style x:Key="Camera3SelectButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
             <Style.Triggers>
@@ -142,7 +80,7 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-
+        
         <!-- プリセットセクションテンプレート -->
         <DataTemplate x:Key="PresetSectionTemplate">
             <StackPanel Margin="0,0,0,10">
@@ -153,133 +91,68 @@
                         <ColumnDefinition Width="2*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-
+                    
                     <!-- プリセット選択ボタン -->
-                    <UniformGrid Grid.Column="0" Columns="2" Margin="0,0,10,0">
-                        <Button Content="1" Tag="1"
-                                Command="{Binding SelectPresetCommand}"
-                                CommandParameter="1"
-                                Style="{StaticResource PresetButtonStyle}" Margin="2"/>
-                        <Button Content="2" Tag="2"
-                                Command="{Binding SelectPresetCommand}"
-                                CommandParameter="2"
-                                Style="{StaticResource PresetButtonStyle}" Margin="2"/>
-                        <Button Content="3" Tag="3"
-                                Command="{Binding SelectPresetCommand}"
-                                CommandParameter="3"
-                                Style="{StaticResource PresetButtonStyle}" Margin="2"/>
-                        <Button Content="4" Tag="4"
-                                Command="{Binding SelectPresetCommand}"
-                                CommandParameter="4"
-                                Style="{StaticResource PresetButtonStyle}" Margin="2"/>
-                        <Button Content="5" Tag="5"
-                                Command="{Binding SelectPresetCommand}"
-                                CommandParameter="5"
-                                Style="{StaticResource PresetButtonStyle}" Margin="2"/>
-                        <Button Content="6" Tag="6"
-                                Command="{Binding SelectPresetCommand}"
-                                CommandParameter="6"
-                                Style="{StaticResource PresetButtonStyle}" Margin="2"/>
-                        <Button Content="7" Tag="7"
-                                Command="{Binding SelectPresetCommand}"
-                                CommandParameter="7"
-                                Style="{StaticResource PresetButtonStyle}" Margin="2"/>
-                        <Button Content="8" Tag="8"
-                                Command="{Binding SelectPresetCommand}"
-                                CommandParameter="8"
-                                Style="{StaticResource PresetButtonStyle}" Margin="2"/>
-                    </UniformGrid>
+                    <ItemsControl Grid.Column="0" ItemsSource="{Binding CameraPresets}" Margin="0,0,10,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="2" Rows="4"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding Number}"
+                                        Tag="{Binding Number}"
+                                        Command="{Binding DataContext.SelectPresetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding Number}"
+                                        Margin="6,5,6,5">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource BasePresetButtonStyle}">
+                                            <Style.Triggers>
+                                                <!-- 選択されているが呼び出されていない（オレンジ） -->
+                                                <DataTrigger Value="1">
+                                                    <DataTrigger.Binding>
+                                                        <MultiBinding Converter="{StaticResource PresetStateConverter}">
+                                                            <Binding Path="DataContext.SelectedPresetNumber" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                            <Binding Path="DataContext.CalledPresetNumber" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                            <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
+                                                        </MultiBinding>
+                                                    </DataTrigger.Binding>
+                                                    <Setter Property="Background" Value="#F59E0B"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                                <!-- 選択されていて呼び出し済み（濃い青） -->
+                                                <DataTrigger Value="2">
+                                                    <DataTrigger.Binding>
+                                                        <MultiBinding Converter="{StaticResource PresetStateConverter}">
+                                                            <Binding Path="DataContext.SelectedPresetNumber" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                            <Binding Path="DataContext.CalledPresetNumber" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                            <Binding RelativeSource="{RelativeSource Self}" Path="Tag"/>
+                                                        </MultiBinding>
+                                                    </DataTrigger.Binding>
+                                                    <Setter Property="Background" Value="{StaticResource CalledPresetBrush}"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
-                    <!-- 呼出/登録 ボタン -->
-                    <Grid Grid.Column="1">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Button Grid.Row="0" Content="呼出" FontSize="12" FontWeight="Bold" Style="{StaticResource ModernButtonStyle}" 
-                                Command="{Binding CallPresetCommand}" 
-                                Padding="20,12" Margin="2"/>
-                        <Button Grid.Row="1" Content="登録" FontSize="12" FontWeight="Bold" Style="{StaticResource ModernButtonStyle}" 
-                                Command="{Binding RegisterPresetCommand}" 
-                                Padding="20,12" Margin="2"/>
-                    </Grid>
-                </Grid>
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- スチルセクションテンプレート -->
-        <DataTemplate x:Key="StillSectionTemplate">
-            <StackPanel Margin="0,0,0,10">
-                <TextBlock Text="AI設定" Style="{StaticResource SectionHeaderStyle}"/>
-
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- スチル選択ボタン -->
-                    <UniformGrid Grid.Column="0" Columns="2" Margin="0,0,10,0">
-                        <Button Content="スチル1" Command="{Binding SelectAiStillCommand}" CommandParameter="1" Tag="1" Style="{StaticResource StillButtonStyle}" Margin="2"/>
-                        <Button Content="スチル2" Command="{Binding SelectAiStillCommand}" CommandParameter="2" Tag="2" Style="{StaticResource StillButtonStyle}" Margin="2"/>
-                        <Button Content="スチル3" Command="{Binding SelectAiStillCommand}" CommandParameter="3" Tag="3" Style="{StaticResource StillButtonStyle}" Margin="2"/>
-                        <Button Content="スチル4" Command="{Binding SelectAiStillCommand}" CommandParameter="4" Tag="4" Style="{StaticResource StillButtonStyle}" Margin="2"/>
-                        <Button Content="スチル5" Command="{Binding SelectAiStillCommand}" CommandParameter="5" Tag="5" Style="{StaticResource StillButtonStyle}" Margin="2"/>
-                        <Button Content="スチル6" Command="{Binding SelectAiStillCommand}" CommandParameter="6" Tag="6" Style="{StaticResource StillButtonStyle}" Margin="2"/>
-                        <Button Content="スチル7" Command="{Binding SelectAiStillCommand}" CommandParameter="7" Tag="7" Style="{StaticResource StillButtonStyle}" Margin="2"/>
-                        <Button Content="スチル8" Command="{Binding SelectAiStillCommand}" CommandParameter="8" Tag="8" Style="{StaticResource StillButtonStyle}" Margin="2"/>
-                    </UniformGrid>
-
-                    <!-- 呼出ボタン -->
-                    <Grid Grid.Column="1">
-                        <Button Content="呼出" FontSize="12" FontWeight="Bold" Style="{StaticResource ModernButtonStyle}" 
-                                Command="{Binding CallAiStillCommand}" 
-                                Padding="20,12" Margin="2"/>
-                    </Grid>
-                </Grid>
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- 通常カメラ用テンプレート -->
-        <DataTemplate x:Key="NormalCameraTemplate">
-            <StackPanel>
-                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource PresetSectionTemplate}"/>
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- AIカメラ用テンプレート -->
-        <DataTemplate x:Key="AiCameraTemplate">
-            <StackPanel>
-                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource PresetSectionTemplate}"/>
-                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource StillSectionTemplate}"/>
-
-                <!-- トラッキング -->
-                <Grid Margin="0,0,0,20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="トラッキング" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,10,0"/>
-                    <Grid Grid.Column="1">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="オン" FontSize="12" FontWeight="Bold" 
-                                Command="{Binding ToggleAiTrackingCommand}" 
-                                CommandParameter="On"
-                                Padding="8,10" Margin="2,0,4,0"
-                                Style="{StaticResource TrackingButtonStyle}"/>
-                        <Button Grid.Column="1" Content="オフ" FontSize="12" FontWeight="Bold" 
-                                Command="{Binding ToggleAiTrackingCommand}" 
-                                CommandParameter="Off"
-                                Padding="8,10" Margin="4,0,2,0">
+                    <!-- 登録モード切替ボタン -->
+                    <Grid Grid.Column="1" VerticalAlignment="Top">
+                        <Button Content="登録" FontSize="13" FontWeight="Bold"
+                                Command="{Binding TogglePresetRegisterModeCommand}"
+                                Padding="14,9" Margin="6,5,6,0" Height="82" MinHeight="82" MaxHeight="82" HorizontalAlignment="Stretch">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsTrackingOn}" Value="False">
-                                            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                                        <DataTrigger Binding="{Binding IsPresetRegisterMode}" Value="True">
+                                            <Setter Property="Background" Value="#F59E0B"/>
                                             <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Content" Value="登録中"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -289,11 +162,25 @@
                 </Grid>
             </StackPanel>
         </DataTemplate>
-
+        
+        <!-- 通常カメラ用テンプレート -->
+        <DataTemplate x:Key="NormalCameraTemplate">
+            <StackPanel>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource PresetSectionTemplate}"/>
+            </StackPanel>
+        </DataTemplate>
+        
+        <!-- AIカメラ用テンプレート -->
+        <DataTemplate x:Key="AiCameraTemplate">
+            <StackPanel>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource PresetSectionTemplate}"/>
+            </StackPanel>
+        </DataTemplate>
+        
         <!-- 方向キー用 テキストボタンスタイル（ローカル用） -->
         <Style x:Key="TriangleButtonStyleLocal" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-            <Setter Property="Width" Value="50"/>
-            <Setter Property="Height" Value="50"/>
+            <Setter Property="Width" Value="64"/>
+            <Setter Property="Height" Value="64"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
             <Setter Property="Foreground" Value="White"/>
@@ -323,8 +210,8 @@
 
         <!-- カメラ操作ボタンスタイル（押下エフェクト付き） -->
         <Style x:Key="CameraControlButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-            <Setter Property="Width" Value="50"/>
-            <Setter Property="Height" Value="50"/>
+            <Setter Property="Width" Value="64"/>
+            <Setter Property="Height" Value="64"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="IsManipulationEnabled" Value="False"/>
             <Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
@@ -360,29 +247,33 @@
     </UserControl.Resources>
     <StackPanel Margin="12">
         <TextBlock Text="カメラ制御" Style="{StaticResource PageTitleStyle}"/>
-
+        
         <!-- カメラ選択 -->
         <TextBlock Text="カメラ選択" Style="{StaticResource SectionHeaderStyle}"/>
         <Grid Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="50"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="50"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="50"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="50"/>
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="0" Content="PTZカメラ1(AI)" 
+            <Button Grid.Column="1" Content="PTZカメラ1(AI)" 
                     Command="{Binding SelectCameraCommand}"
                     Style="{StaticResource Camera1SelectButtonStyle}"
                     FontSize="14" FontWeight="Bold" 
                     Padding="8,10" 
                     Margin="2"
-                    IsEnabled="{Binding Camera1Enabled}">
+                    IsEnabled="{Binding Camera1Enabled}" Click="Button_Click">
                 <Button.CommandParameter>
                     <Binding Path="Camera1"/>
                 </Button.CommandParameter>
             </Button>
 
-            <Button Grid.Column="1" Content="PTZカメラ2" 
+            <Button Grid.Column="3" Content="PTZカメラ2" 
                     Command="{Binding SelectCameraCommand}"
                     Style="{StaticResource Camera2SelectButtonStyle}"
                     FontSize="14" FontWeight="Bold" 
@@ -394,7 +285,7 @@
                 </Button.CommandParameter>
             </Button>
 
-            <Button Grid.Column="2" Content="PTZカメラ3" 
+            <Button Grid.Column="5" Content="PTZカメラ3" 
                     Command="{Binding SelectCameraCommand}"
                     Style="{StaticResource Camera3SelectButtonStyle}"
                     FontSize="14" FontWeight="Bold" 
@@ -406,7 +297,7 @@
                 </Button.CommandParameter>
             </Button>
         </Grid>
-
+        
         <!-- 操作ボタン領域 -->
         <Grid Margin="0,0,0,20">
             <Grid.RowDefinitions>
@@ -414,16 +305,17 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             <TextBlock Grid.Row="0" Text="カメラ移動" Style="{StaticResource SectionHeaderStyle}"/>
-
+            
             <Grid Grid.Row="1" Margin="0,0,0,6">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="20"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
+                
                 <!-- 9方向ボタン領域 -->
-                <Grid Grid.Column="1" Width="180" Height="180" HorizontalAlignment="Center">
+                <Viewbox Grid.Column="1" Stretch="Uniform" MaxWidth="240" MaxHeight="240" HorizontalAlignment="Center">
+                <Grid Width="240" Height="240">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="*"/>
@@ -441,89 +333,139 @@
                             PreviewMouseDown="MoveButton_PreviewMouseDown" PreviewMouseUp="MoveButton_PreviewMouseUp"
                             PreviewTouchDown="MoveButton_PreviewTouchDown" PreviewTouchUp="MoveButton_PreviewTouchUp"
                             LostTouchCapture="MoveButton_LostTouchCapture">
-                        <TextBlock Text="◤" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="◤" FontSize="26" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <!-- 上 -->
                     <Button Grid.Row="0" Grid.Column="1" Style="{StaticResource CameraControlButtonStyle}" Command="{Binding MoveCameraCommand}" CommandParameter="Up"
                             PreviewMouseDown="MoveButton_PreviewMouseDown" PreviewMouseUp="MoveButton_PreviewMouseUp"
                             PreviewTouchDown="MoveButton_PreviewTouchDown" PreviewTouchUp="MoveButton_PreviewTouchUp"
                             LostTouchCapture="MoveButton_LostTouchCapture">
-                        <TextBlock Text="▲" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="▲" FontSize="26" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <!-- 右上 -->
                     <Button Grid.Row="0" Grid.Column="2" Style="{StaticResource CameraControlButtonStyle}" Command="{Binding MoveCameraCommand}" CommandParameter="UpRight"
                             PreviewMouseDown="MoveButton_PreviewMouseDown" PreviewMouseUp="MoveButton_PreviewMouseUp"
                             PreviewTouchDown="MoveButton_PreviewTouchDown" PreviewTouchUp="MoveButton_PreviewTouchUp"
                             LostTouchCapture="MoveButton_LostTouchCapture">
-                        <TextBlock Text="◥" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="◥" FontSize="26" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <!-- 左 -->
                     <Button Grid.Row="1" Grid.Column="0" Style="{StaticResource CameraControlButtonStyle}" Command="{Binding MoveCameraCommand}" CommandParameter="Left"
                             PreviewMouseDown="MoveButton_PreviewMouseDown" PreviewMouseUp="MoveButton_PreviewMouseUp"
                             PreviewTouchDown="MoveButton_PreviewTouchDown" PreviewTouchUp="MoveButton_PreviewTouchUp"
                             LostTouchCapture="MoveButton_LostTouchCapture">
-                        <TextBlock Text="◀" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="◀" FontSize="26" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <!-- 中央 -->
                     <Button Grid.Row="1" Grid.Column="1" Style="{StaticResource CenterButtonStyle}" Command="{Binding MoveCameraCommand}" CommandParameter="Center"
                             PreviewMouseDown="MoveButton_PreviewMouseDown" PreviewMouseUp="MoveButton_PreviewMouseUp"
                             PreviewTouchDown="MoveButton_PreviewTouchDown" PreviewTouchUp="MoveButton_PreviewTouchUp"
                             LostTouchCapture="MoveButton_LostTouchCapture">
-                        <TextBlock Text="■" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="■" FontSize="26" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <!-- 右 -->
                     <Button Grid.Row="1" Grid.Column="2" Style="{StaticResource CameraControlButtonStyle}" Command="{Binding MoveCameraCommand}" CommandParameter="Right"
                             PreviewMouseDown="MoveButton_PreviewMouseDown" PreviewMouseUp="MoveButton_PreviewMouseUp"
                             PreviewTouchDown="MoveButton_PreviewTouchDown" PreviewTouchUp="MoveButton_PreviewTouchUp"
                             LostTouchCapture="MoveButton_LostTouchCapture">
-                        <TextBlock Text="▶" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="▶" FontSize="26" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <!-- 左下 -->
                     <Button Grid.Row="2" Grid.Column="0" Style="{StaticResource CameraControlButtonStyle}" Command="{Binding MoveCameraCommand}" CommandParameter="DownLeft"
                             PreviewMouseDown="MoveButton_PreviewMouseDown" PreviewMouseUp="MoveButton_PreviewMouseUp"
                             PreviewTouchDown="MoveButton_PreviewTouchDown" PreviewTouchUp="MoveButton_PreviewTouchUp"
                             LostTouchCapture="MoveButton_LostTouchCapture">
-                        <TextBlock Text="◣" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="◣" FontSize="26" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <!-- 下 -->
                     <Button Grid.Row="2" Grid.Column="1" Style="{StaticResource CameraControlButtonStyle}" Command="{Binding MoveCameraCommand}" CommandParameter="Down"
                             PreviewMouseDown="MoveButton_PreviewMouseDown" PreviewMouseUp="MoveButton_PreviewMouseUp"
                             PreviewTouchDown="MoveButton_PreviewTouchDown" PreviewTouchUp="MoveButton_PreviewTouchUp"
                             LostTouchCapture="MoveButton_LostTouchCapture">
-                        <TextBlock Text="▼" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="▼" FontSize="26" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <!-- 右下 -->
                     <Button Grid.Row="2" Grid.Column="2" Style="{StaticResource CameraControlButtonStyle}" Command="{Binding MoveCameraCommand}" CommandParameter="DownRight"
                             PreviewMouseDown="MoveButton_PreviewMouseDown" PreviewMouseUp="MoveButton_PreviewMouseUp"
                             PreviewTouchDown="MoveButton_PreviewTouchDown" PreviewTouchUp="MoveButton_PreviewTouchUp"
                             LostTouchCapture="MoveButton_LostTouchCapture">
-                        <TextBlock Text="◢" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="◢" FontSize="26" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                 </Grid>
+                </Viewbox>
 
-                <!-- ズームボタン（右側縦並び） -->
-                <StackPanel Grid.Column="2" Orientation="Vertical" VerticalAlignment="Center" Margin="32,0,0,0">
+                <!-- ズーム＋トラッキング（右側） -->
+                <Grid Grid.Column="2" VerticalAlignment="Center" Margin="24,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- ズームボタン（縦並び）- Viewboxの外で固定サイズ -->
+                    <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Center">
                     <Button Command="{Binding ZoomCameraCommand}"
-                            CommandParameter="In" Width="60" Height="40" Margin="0,0,0,8" Padding="0"
-                            PreviewMouseDown="ZoomButton_PreviewMouseDown" PreviewMouseUp="ZoomButton_PreviewMouseUp"
-                            PreviewTouchDown="ZoomButton_PreviewTouchDown" PreviewTouchUp="ZoomButton_PreviewTouchUp"
-                            LostTouchCapture="ZoomButton_LostTouchCapture"
-                            Style="{StaticResource CameraControlButtonStyle}">
+                                CommandParameter="In" Width="80" Height="56" Margin="0,0,0,10" Padding="0"
+                                PreviewMouseDown="ZoomButton_PreviewMouseDown" PreviewMouseUp="ZoomButton_PreviewMouseUp"
+                                PreviewTouchDown="ZoomButton_PreviewTouchDown" PreviewTouchUp="ZoomButton_PreviewTouchUp"
+                                LostTouchCapture="ZoomButton_LostTouchCapture"
+                                Style="{StaticResource CameraControlButtonStyle}">
                         <Button.Content>
-                            <TextBlock Text="＋" FontSize="18" FontWeight="Bold" Foreground="White"/>
+                                <TextBlock Text="＋" FontSize="24" FontWeight="Bold" Foreground="White"/>
                         </Button.Content>
                     </Button>
                     <Button Command="{Binding ZoomCameraCommand}"
-                            CommandParameter="Out" Width="60" Height="40" Padding="0"
-                            PreviewMouseDown="ZoomButton_PreviewMouseDown" PreviewMouseUp="ZoomButton_PreviewMouseUp"
-                            PreviewTouchDown="ZoomButton_PreviewTouchDown" PreviewTouchUp="ZoomButton_PreviewTouchUp"
-                            LostTouchCapture="ZoomButton_LostTouchCapture"
-                            Style="{StaticResource CameraControlButtonStyle}">
+                                CommandParameter="Out" Width="80" Height="56" Padding="0"
+                                PreviewMouseDown="ZoomButton_PreviewMouseDown" PreviewMouseUp="ZoomButton_PreviewMouseUp"
+                                PreviewTouchDown="ZoomButton_PreviewTouchDown" PreviewTouchUp="ZoomButton_PreviewTouchUp"
+                                LostTouchCapture="ZoomButton_LostTouchCapture"
+                                Style="{StaticResource CameraControlButtonStyle}">
                         <Button.Content>
-                            <TextBlock Text="－" FontSize="18" FontWeight="Bold" Foreground="White"/>
+                                <TextBlock Text="－" FontSize="24" FontWeight="Bold" Foreground="White"/>
                         </Button.Content>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- トラッキング（ズームの横 / カメラ1のみ表示） -->
+                    <Viewbox Grid.Column="1" Stretch="Uniform" MaxWidth="240" MaxHeight="120" VerticalAlignment="Center" Margin="32,0,0,0">
+                    <Grid Visibility="{Binding IsCamera1Selected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- ラベル（ボタンと同じ行） -->
+                        <TextBlock Grid.Column="0"
+                                   Text="トラッキング"
+                                   Style="{StaticResource SectionHeaderStyle}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,12,0"
+                                   TextAlignment="Right"/>
+
+                        <!-- オン/オフ -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="オン" Width="100" Height="56" Margin="0,0,12,0"
+                                    Command="{Binding ToggleAiTrackingCommand}" CommandParameter="On"
+                                    Style="{StaticResource TrackingButtonStyle}"/>
+                            <Button Content="オフ" Width="100" Height="56"
+                                    Command="{Binding ToggleAiTrackingCommand}" CommandParameter="Off">
+                        <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Height" Value="56"/>
+                                        <Setter Property="Width" Value="100"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsTrackingOn}" Value="False">
+                                                <Setter Property="Background" Value="{StaticResource CalledPresetBrush}"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                        </Button.Style>
                     </Button>
                 </StackPanel>
+            </Grid>
+                    </Viewbox>
+                </Grid>
             </Grid>
         </Grid>
 
@@ -534,7 +476,7 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
         </Grid>
-
+        
         <!-- プリセット以降のコンテンツ（カメラタイプに応じてテンプレート切り替え） -->
         <ContentControl Content="{Binding}">
             <ContentControl.Style>

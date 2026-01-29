@@ -124,11 +124,70 @@ namespace Shibaura_ControlHub.Services
         /// <param name="ipAddress">カメラのIPアドレス</param>
         /// <param name="direction">方向（up, down, left, right, home）</param>
         /// <param name="speed">速度（0-15、0で停止、デフォルト: 1）</param>
+        /// <param name="cameraNumber">カメラ番号（カメラ1の場合、別のCGI構文を使用）</param>
         /// <param name="cancellationToken">キャンセルトークン</param>
-        public async Task MoveAsync(string ipAddress, string direction, int speed = 1, CancellationToken cancellationToken = default)
+        public async Task MoveAsync(string ipAddress, string direction, int speed = 1, int cameraNumber = 0, CancellationToken cancellationToken = default)
         {
-            speed = Math.Clamp(speed, 0, 15);
-            var uri = $"http://{ipAddress}/command/ptzf.cgi?Move={direction},{speed}";
+            string uri;
+            
+            if (cameraNumber == 1)
+            {
+                int panSpeed = 0;
+                int tiltSpeed = 0;
+                
+                switch (direction)
+                {
+                    case "up":
+                        panSpeed = 0;
+                        tiltSpeed = speed;
+                        break;
+                    case "down":
+                        panSpeed = 0;
+                        tiltSpeed = speed;
+                        break;
+                    case "left":
+                        panSpeed = speed;
+                        tiltSpeed = 0;
+                        break;
+                    case "right":
+                        panSpeed = speed;
+                        tiltSpeed = 0;
+                        break;
+                    case "up-left":
+                        panSpeed = speed;
+                        tiltSpeed = speed;
+                        break;
+                    case "up-right":
+                        panSpeed = speed;
+                        tiltSpeed = speed;
+                        break;
+                    case "down-left":
+                        panSpeed = speed;
+                        tiltSpeed = speed;
+                        break;
+                    case "down-right":
+                        panSpeed = speed;
+                        tiltSpeed = speed;
+                        break;
+                    case "stop":
+                        panSpeed = 0;
+                        tiltSpeed = 0;
+                        break;
+                    default:
+                        panSpeed = 0;
+                        tiltSpeed = 0;
+                        break;
+                }
+                
+                var encodedDirection = Uri.EscapeDataString(direction);
+                uri = $"http://{ipAddress}/command/ptzf.cgi?PanTiltMove={encodedDirection},{panSpeed},{tiltSpeed}";
+            }
+            else
+            {
+                speed = Math.Clamp(speed, 0, 15);
+                uri = $"http://{ipAddress}/command/ptzf.cgi?Move={direction},{speed}";
+            }
+            
             await SendGetRequestAsync(uri, ipAddress, cancellationToken).ConfigureAwait(false);
             ActionLogger.LogAction("パン・チルト移動", $"カメラ {ipAddress} を {direction} 方向に移動（速度: {speed}）");
         }
@@ -150,14 +209,14 @@ namespace Shibaura_ControlHub.Services
         /// </summary>
         /// <param name="ipAddress">カメラのIPアドレス</param>
         /// <param name="cancellationToken">キャンセルトークン</param>
-        public async Task StopPanTiltAllAsync(string ipAddress, CancellationToken cancellationToken = default)
-        {
-            // すべての方向に対して速度0を送信して停止
-            await MoveAsync(ipAddress, "up", speed: 0, cancellationToken).ConfigureAwait(false);
-            await MoveAsync(ipAddress, "down", speed: 0, cancellationToken).ConfigureAwait(false);
-            await MoveAsync(ipAddress, "left", speed: 0, cancellationToken).ConfigureAwait(false);
-            await MoveAsync(ipAddress, "right", speed: 0, cancellationToken).ConfigureAwait(false);
-        }
+        //public async Task StopPanTiltAllAsync(string ipAddress, CancellationToken cancellationToken = default)
+        //{
+        //    // すべての方向に対して速度0を送信して停止
+        //    await MoveAsync(ipAddress, "up", speed: 0, cancellationToken: cancellationToken).ConfigureAwait(false);
+        //    await MoveAsync(ipAddress, "down", speed: 0, cancellationToken: cancellationToken).ConfigureAwait(false);
+        //    await MoveAsync(ipAddress, "left", speed: 0, cancellationToken: cancellationToken).ConfigureAwait(false);
+        //    await MoveAsync(ipAddress, "right", speed: 0, cancellationToken: cancellationToken).ConfigureAwait(false);
+        //}
 
         /// <summary>
         /// ズーム操作（Moveでtele/wideを指定）
@@ -165,14 +224,26 @@ namespace Shibaura_ControlHub.Services
         /// <param name="ipAddress">カメラのIPアドレス</param>
         /// <param name="direction">方向（tele=ズームイン, wide=ズームアウト）</param>
         /// <param name="speed">速度（0-7、0で停止、デフォルト: 1）</param>
+        /// <param name="cameraNumber">カメラ番号（カメラ1の場合、別のCGI構文を使用）</param>
         /// <param name="cancellationToken">キャンセルトークン</param>
-        public async Task ZoomAsync(string ipAddress, string direction, int speed = 1, CancellationToken cancellationToken = default)
+        public async Task ZoomAsync(string ipAddress, string direction, int speed = 1, int cameraNumber = 0, CancellationToken cancellationToken = default)
         {
-            speed = Math.Clamp(speed, 0, 7);
-            var uri = $"http://{ipAddress}/command/ptzf.cgi?Move={direction},{speed}";
+            string uri;
+            
+            if (cameraNumber == 1)
+            {
+                int zoomSpeed = Math.Clamp(speed, 0, 32766);
+                uri = $"http://{ipAddress}/command/ptzf.cgi?ZoomMove={direction},{zoomSpeed}";
+            }
+            else
+            {
+                speed = Math.Clamp(speed, 0, 7);
+                uri = $"http://{ipAddress}/command/ptzf.cgi?Move={direction},{speed}";
+            }
+            
             await SendGetRequestAsync(uri, ipAddress, cancellationToken).ConfigureAwait(false);
             
-            if (speed == 0)
+            if (speed == 0 || direction == "stop")
             {
                 ActionLogger.LogAction("ズーム停止", $"カメラ {ipAddress} のズームを停止");
             }
@@ -186,10 +257,19 @@ namespace Shibaura_ControlHub.Services
         /// ズーム停止
         /// </summary>
         /// <param name="ipAddress">カメラのIPアドレス</param>
+        /// <param name="cameraNumber">カメラ番号（カメラ1の場合、別のCGI構文を使用）</param>
         /// <param name="cancellationToken">キャンセルトークン</param>
-        public async Task ZoomStopAsync(string ipAddress, CancellationToken cancellationToken = default)
+        public async Task ZoomStopAsync(string ipAddress, int cameraNumber = 0, CancellationToken cancellationToken = default)
         {
-            var uri = $"http://{ipAddress}/command/ptzf.cgi?Move=stop,zoom";
+            string uri;
+            if (cameraNumber == 1)
+            {
+                uri = $"http://{ipAddress}/command/ptzf.cgi?ZoomMove=stop,0";
+            }
+            else
+            {
+                uri = $"http://{ipAddress}/command/ptzf.cgi?Move=stop,zoom";
+            }
             await SendGetRequestAsync(uri, ipAddress, cancellationToken).ConfigureAwait(false);
             ActionLogger.LogAction("ズーム停止", $"カメラ {ipAddress} のズームを停止しました");
         }
@@ -208,6 +288,40 @@ namespace Shibaura_ControlHub.Services
             await SendGetRequestAsync(uri, ipAddress, cancellationToken).ConfigureAwait(false);
             
             ActionLogger.LogAction("フォーカス操作", $"カメラ {ipAddress} のフォーカスを {direction} に設定（速度: {speed}）");
+        }
+
+        /// <summary>
+        /// PTZ Auto Framing の開始/停止
+        /// </summary>
+        /// <param name="ipAddress">カメラのIPアドレス</param>
+        /// <param name="state">状態（on: 追尾開始, off: 追尾終了）</param>
+        /// <param name="cancellationToken">キャンセルトークン</param>
+        public async Task SetPtzAutoFramingAsync(string ipAddress, string state, CancellationToken cancellationToken = default)
+        {
+            if (state != "on" && state != "off")
+            {
+                ActionLogger.LogError("PTZ Auto Framing設定", $"無効な状態: {state} (on または off を指定してください)");
+                return;
+            }
+
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var uri = $"http://{ipAddress}/analytics/ptzautoframing.cgi?PtzAutoFraming={state}&_={timestamp}";
+            await SendGetRequestAsync(uri, ipAddress, cancellationToken).ConfigureAwait(false);
+            
+            ActionLogger.LogAction("PTZ Auto Framing設定", $"カメラ {ipAddress} のPTZ Auto Framingを {state} に設定しました");
+        }
+
+        /// <summary>
+        /// PTZ Auto Framing の状態問い合わせ
+        /// </summary>
+        /// <param name="ipAddress">カメラのIPアドレス</param>
+        /// <param name="cancellationToken">キャンセルトークン</param>
+        /// <returns>レスポンス文字列</returns>
+        public async Task<string> InquiryPtzAutoFramingAsync(string ipAddress, CancellationToken cancellationToken = default)
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var uri = $"http://{ipAddress}/analytics/ptzautoframing.cgi?Inquiry=PtzAutoFraming&_={timestamp}";
+            return await SendGetRequestAsync(uri, ipAddress, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

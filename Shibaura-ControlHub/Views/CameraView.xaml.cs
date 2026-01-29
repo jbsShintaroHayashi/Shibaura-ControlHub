@@ -183,6 +183,11 @@ namespace Shibaura_ControlHub.Views
                 viewModel.StopZoom();
             }
         }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 
     public static class VisualTreeHelperExtensions

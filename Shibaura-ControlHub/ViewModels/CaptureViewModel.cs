@@ -20,7 +20,7 @@ namespace Shibaura_ControlHub.ViewModels
         private ModeSettingsData? _modeSettingsData;
 
         /// <summary>
-        /// キャプチャマトリクスボタンリスト（1行×11列 = 11個）
+        /// キャプチャマトリクスボタンリスト（1行×10列 = 10個）
         /// </summary>
         public ObservableCollection<EsportsMatrixButton> CaptureMatrixButtons { get; set; } = new ObservableCollection<EsportsMatrixButton>();
 
@@ -30,7 +30,7 @@ namespace Shibaura_ControlHub.ViewModels
         public ObservableCollection<string> CaptureMatrixRowLabels { get; set; } = new ObservableCollection<string>();
 
         /// <summary>
-        /// キャプチャマトリクスの列ラベル（11列分）
+        /// キャプチャマトリクスの列ラベル（10列分）
         /// </summary>
         public ObservableCollection<string> CaptureMatrixColumnLabels { get; set; } = new ObservableCollection<string>();
 
@@ -133,7 +133,7 @@ namespace Shibaura_ControlHub.ViewModels
             // 行ラベルを初期化（1行のみ）
             CaptureMatrixRowLabels.Add("キャプチャ");
             
-            // 列ラベルを初期化（スイッチャーAの遠隔モードと同じ11列）
+            // 列ラベルを初期化（スイッチャーAの遠隔モードと同じ10列）
             CaptureMatrixColumnLabels.Add("PGM");
             CaptureMatrixColumnLabels.Add("CLN");
             CaptureMatrixColumnLabels.Add("Cam1");
@@ -144,13 +144,12 @@ namespace Shibaura_ControlHub.ViewModels
             CaptureMatrixColumnLabels.Add("講師");
             CaptureMatrixColumnLabels.Add("PcA");
             CaptureMatrixColumnLabels.Add("PcB");
-            CaptureMatrixColumnLabels.Add("オフ");
 
-            // 1行×11列のマトリクスを生成
-            ActionLogger.LogProcessing("マトリクス生成", "1行×11列のマトリクスを生成中");
+            // 1行×10列のマトリクスを生成
+            ActionLogger.LogProcessing("マトリクス生成", "1行×10列のマトリクスを生成中");
             for (int row = 1; row <= 1; row++)
             {
-                for (int column = 1; column <= 11; column++)
+                for (int column = 1; column <= 10; column++)
                 {
                     CaptureMatrixButtons.Add(new EsportsMatrixButton
                     {

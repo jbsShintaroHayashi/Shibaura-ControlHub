@@ -4,7 +4,9 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Shibaura_ControlHub.Models;
+using Shibaura_ControlHub.Services;
 using Shibaura_ControlHub.Utils;
 
 namespace Shibaura_ControlHub.ViewModels
@@ -17,9 +19,27 @@ namespace Shibaura_ControlHub.ViewModels
         private readonly Dictionary<int, ModeSettingsData> _allModeSettings = new Dictionary<int, ModeSettingsData>();
         private ModeSettingsData? _modeSettingsData;
 
+        private readonly DispatcherTimer _timecodeTimer;
+        private readonly ObservableCollection<EquipmentStatus> _monitoringList;
+        private readonly HyperDeckTcpService _hyperDeckTcpService = new HyperDeckTcpService();
+
+        private bool _isOverallRecording;
+        private DateTime? _overallRecordingStartTime;
+        private string _overallRecordingStatusText = "待機中";
+        private string _overallTimecode = "00:00:00";
+
+        private bool _isRecording1;
+        private DateTime? _recording1StartTime;
+        private string _recording1StatusText = "待機中";
+        private string _recording1Timecode = "00:00:00";
+
+        private bool _isRecording2;
+        private DateTime? _recording2StartTime;
+        private string _recording2StatusText = "待機中";
+        private string _recording2Timecode = "00:00:00";
 
         /// <summary>
-        /// 録画マトリクスボタンリスト（2行×9列 = 18個）
+        /// 録画マトリクスボタンリスト（2行×10列 = 20個）
         /// </summary>
         public ObservableCollection<EsportsMatrixButton> RecordingMatrixButtons { get; set; } = new ObservableCollection<EsportsMatrixButton>();
 
@@ -29,20 +49,157 @@ namespace Shibaura_ControlHub.ViewModels
         public ObservableCollection<string> RecordingMatrixRowLabels { get; set; } = new ObservableCollection<string>();
 
         /// <summary>
-        /// 録画マトリクスの列ラベル（9列分）
+        /// 録画マトリクスの列ラベル（10列分）
         /// </summary>
         public ObservableCollection<string> RecordingMatrixColumnLabels { get; set; } = new ObservableCollection<string>();
 
         // Commands
         public ICommand SelectRecordingMatrixCommand { get; private set; } = null!;
+        public ICommand StartOverallRecordingCommand { get; private set; } = null!;
+        public ICommand StopOverallRecordingCommand { get; private set; } = null!;
+        public ICommand StartRecording1Command { get; private set; } = null!;
+        public ICommand StopRecording1Command { get; private set; } = null!;
+        public ICommand StartRecording2Command { get; private set; } = null!;
+        public ICommand StopRecording2Command { get; private set; } = null!;
 
-        public RecordingViewModel(string mode)
+        /// <summary>
+        /// 録画マトリクスの選択に合わせてスイッチャーへルーティング送信を要求するイベント。(row, column, matrixId)。
+        /// ModeControlViewModel で SwitcherViewModel.RouteToAtem(row, column, matrixId) に接続している。
+        /// </summary>
+        public event Action<int, int, string>? RoutingRequested;
+
+        public bool IsOverallRecording
+        {
+            get => _isOverallRecording;
+            private set
+            {
+                if (_isOverallRecording != value)
+                {
+                    _isOverallRecording = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string OverallRecordingStatusText
+        {
+            get => _overallRecordingStatusText;
+            private set
+            {
+                if (_overallRecordingStatusText != value)
+                {
+                    _overallRecordingStatusText = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string OverallTimecode
+        {
+            get => _overallTimecode;
+            private set
+            {
+                if (_overallTimecode != value)
+                {
+                    _overallTimecode = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool IsRecording1
+        {
+            get => _isRecording1;
+            private set
+            {
+                if (_isRecording1 != value)
+                {
+                    _isRecording1 = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string Recording1StatusText
+        {
+            get => _recording1StatusText;
+            private set
+            {
+                if (_recording1StatusText != value)
+                {
+                    _recording1StatusText = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string Recording1Timecode
+        {
+            get => _recording1Timecode;
+            private set
+            {
+                if (_recording1Timecode != value)
+                {
+                    _recording1Timecode = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool IsRecording2
+        {
+            get => _isRecording2;
+            private set
+            {
+                if (_isRecording2 != value)
+                {
+                    _isRecording2 = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string Recording2StatusText
+        {
+            get => _recording2StatusText;
+            private set
+            {
+                if (_recording2StatusText != value)
+                {
+                    _recording2StatusText = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string Recording2Timecode
+        {
+            get => _recording2Timecode;
+            private set
+            {
+                if (_recording2Timecode != value)
+                {
+                    _recording2Timecode = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public RecordingViewModel(string mode, ObservableCollection<EquipmentStatus> monitoringList)
         {
             SetCurrentModeFromName(mode);
+            _monitoringList = monitoringList;
             
             LoadModeSettings();
             InitializeRecordingMatrix();
             InitializeCommands();
+
+            _timecodeTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _timecodeTimer.Tick += (_, __) => UpdateTimecodes();
+            _timecodeTimer.Start();
         }
 
         protected override void OnModeChanged()
@@ -68,6 +225,9 @@ namespace Shibaura_ControlHub.ViewModels
             OnPropertyChanged(nameof(RecordingMatrixButtons));
             OnPropertyChanged(nameof(RecordingMatrixRowLabels));
             OnPropertyChanged(nameof(RecordingMatrixColumnLabels));
+
+            // モード変更に伴い、復元された録画出力（REC1/REC2）をスイッチャーへ適用
+            RequestRoutingForCurrentSelection();
         }
 
         /// <summary>
@@ -76,42 +236,244 @@ namespace Shibaura_ControlHub.ViewModels
         private void InitializeCommands()
         {
             SelectRecordingMatrixCommand = new RelayCommand<EsportsMatrixButton>(SelectRecordingMatrix);
+            StartOverallRecordingCommand = new RelayCommand(StartOverallRecording, () => !IsOverallRecording);
+            StopOverallRecordingCommand = new RelayCommand(StopOverallRecording, () => IsOverallRecording);
+            StartRecording1Command = new RelayCommand(StartRecording1, () => !IsRecording1);
+            StopRecording1Command = new RelayCommand(StopRecording1, () => IsRecording1);
+            StartRecording2Command = new RelayCommand(StartRecording2, () => !IsRecording2);
+            StopRecording2Command = new RelayCommand(StopRecording2, () => IsRecording2);
+        }
+
+        private async void StartOverallRecording()
+        {
+            var (ok1, ok2) = await StartBothAsync().ConfigureAwait(false);
+            if (!ok1 && !ok2)
+            {
+                return;
+            }
+
+            // UIスレッドで反映
+            await Dispatcher.Yield();
+            IsOverallRecording = ok1 || ok2;
+            _overallRecordingStartTime = DateTime.UtcNow;
+            OverallRecordingStatusText = "録画中";
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+
+        private async void StopOverallRecording()
+        {
+            var (ok1, ok2) = await StopBothAsync().ConfigureAwait(false);
+            if (!ok1 && !ok2)
+            {
+                return;
+            }
+
+            await Dispatcher.Yield();
+            IsOverallRecording = false;
+            _overallRecordingStartTime = null;
+            OverallRecordingStatusText = "待機中";
+            OverallTimecode = "00:00:00";
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+
+        private async void StartRecording1()
+        {
+            var ok = await StartOneAsync(1).ConfigureAwait(false);
+            if (!ok)
+            {
+                return;
+            }
+
+            await Dispatcher.Yield();
+            IsRecording1 = true;
+            _recording1StartTime = DateTime.UtcNow;
+            Recording1StatusText = "録画中";
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+
+        private async void StopRecording1()
+        {
+            var ok = await StopOneAsync(1).ConfigureAwait(false);
+            if (!ok)
+            {
+                return;
+            }
+
+            await Dispatcher.Yield();
+            IsRecording1 = false;
+            _recording1StartTime = null;
+            Recording1StatusText = "待機中";
+            Recording1Timecode = "00:00:00";
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+
+        private async void StartRecording2()
+        {
+            var ok = await StartOneAsync(2).ConfigureAwait(false);
+            if (!ok)
+            {
+                return;
+            }
+
+            await Dispatcher.Yield();
+            IsRecording2 = true;
+            _recording2StartTime = DateTime.UtcNow;
+            Recording2StatusText = "録画中";
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+
+        private async void StopRecording2()
+        {
+            var ok = await StopOneAsync(2).ConfigureAwait(false);
+            if (!ok)
+            {
+                return;
+            }
+
+            await Dispatcher.Yield();
+            IsRecording2 = false;
+            _recording2StartTime = null;
+            Recording2StatusText = "待機中";
+            Recording2Timecode = "00:00:00";
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        }
+
+        private EquipmentStatus? FindHyperDeck(int recorderNumber)
+        {
+            // 名前の揺れ吸収（例: 録画機１/録画機1/再生機１/再生機1）
+            string[] candidates = recorderNumber switch
+            {
+                1 => new[] { "録画機１", "録画機1", "再生機１", "再生機1", "REC1", "rec1" },
+                2 => new[] { "録画機２", "録画機2", "再生機２", "再生機2", "REC2", "rec2" },
+                _ => Array.Empty<string>()
+            };
+
+            return _monitoringList.FirstOrDefault(e =>
+                !string.IsNullOrWhiteSpace(e.IpAddress) &&
+                candidates.Any(c => e.Name.Contains(c, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        private async Task<bool> StartOneAsync(int recorderNumber)
+        {
+            var deck = FindHyperDeck(recorderNumber);
+            if (deck == null)
+            {
+                ActionLogger.LogError("HyperDeck録画開始", $"録画機{recorderNumber} のIPが見つかりません（monitoring_equipment.json を確認してください）");
+                return false;
+            }
+
+            try
+            {
+                ActionLogger.LogProcessing("HyperDeck録画開始", $"録画機{recorderNumber}: {deck.IpAddress}:{deck.Port} へ record");
+                await _hyperDeckTcpService.RecordAsync(deck.IpAddress, deck.Port).ConfigureAwait(false);
+                ActionLogger.LogResult("HyperDeck録画開始", $"録画機{recorderNumber}: record を送信しました");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ActionLogger.LogError("HyperDeck録画開始", $"録画機{recorderNumber}: 送信失敗: {ex.Message}");
+                return false;
+            }
+        }
+
+        private async Task<bool> StopOneAsync(int recorderNumber)
+        {
+            var deck = FindHyperDeck(recorderNumber);
+            if (deck == null)
+            {
+                ActionLogger.LogError("HyperDeck録画停止", $"録画機{recorderNumber} のIPが見つかりません（monitoring_equipment.json を確認してください）");
+                return false;
+            }
+
+            try
+            {
+                ActionLogger.LogProcessing("HyperDeck録画停止", $"録画機{recorderNumber}: {deck.IpAddress}:{deck.Port} へ stop");
+                await _hyperDeckTcpService.StopAsync(deck.IpAddress, deck.Port).ConfigureAwait(false);
+                ActionLogger.LogResult("HyperDeck録画停止", $"録画機{recorderNumber}: stop を送信しました");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ActionLogger.LogError("HyperDeck録画停止", $"録画機{recorderNumber}: 送信失敗: {ex.Message}");
+                return false;
+            }
+        }
+
+        private async Task<(bool ok1, bool ok2)> StartBothAsync()
+        {
+            var t1 = StartOneAsync(1);
+            var t2 = StartOneAsync(2);
+            await Task.WhenAll(t1, t2).ConfigureAwait(false);
+            return (t1.Result, t2.Result);
+        }
+
+        private async Task<(bool ok1, bool ok2)> StopBothAsync()
+        {
+            var t1 = StopOneAsync(1);
+            var t2 = StopOneAsync(2);
+            await Task.WhenAll(t1, t2).ConfigureAwait(false);
+            return (t1.Result, t2.Result);
+        }
+
+        private void UpdateTimecodes()
+        {
+            if (IsOverallRecording && _overallRecordingStartTime.HasValue)
+            {
+                OverallTimecode = FormatTimecode(DateTime.UtcNow - _overallRecordingStartTime.Value);
+            }
+
+            if (IsRecording1 && _recording1StartTime.HasValue)
+            {
+                Recording1Timecode = FormatTimecode(DateTime.UtcNow - _recording1StartTime.Value);
+            }
+
+            if (IsRecording2 && _recording2StartTime.HasValue)
+            {
+                Recording2Timecode = FormatTimecode(DateTime.UtcNow - _recording2StartTime.Value);
+            }
+        }
+
+        private static string FormatTimecode(TimeSpan elapsed)
+        {
+            if (elapsed < TimeSpan.Zero)
+            {
+                elapsed = TimeSpan.Zero;
+            }
+
+            var hours = (int)elapsed.TotalHours;
+            return $"{hours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}";
         }
 
         /// <summary>
-        /// 録画マトリクスを初期化
+        /// 録画マトリクスを初期化（SwitcherDefinitions.Recording から定義を取得）
         /// </summary>
         private void InitializeRecordingMatrix()
         {
             string modeName = CurrentModeName;
             ActionLogger.LogProcessingStart("録画マトリクス初期化", $"モード: {modeName}");
-            
+
+            var def = SwitcherDefinitions.GetMatrix(SwitcherDefinitions.MatrixIdRecording);
+            if (def == null)
+            {
+                ActionLogger.LogError("録画マトリクス初期化", "マトリクス定義 Recording が見つかりません");
+                return;
+            }
+
             RecordingMatrixButtons.Clear();
             RecordingMatrixRowLabels.Clear();
             RecordingMatrixColumnLabels.Clear();
-            
-            // 行ラベルを初期化
-            RecordingMatrixRowLabels.Add("録画1");
-            RecordingMatrixRowLabels.Add("録画2");
 
-            // 列ラベルを初期化
-            RecordingMatrixColumnLabels.Add("PGM");
-            RecordingMatrixColumnLabels.Add("CLN");
-            RecordingMatrixColumnLabels.Add("Cam 1");
-            RecordingMatrixColumnLabels.Add("Cam 2");
-            RecordingMatrixColumnLabels.Add("Cam 3");
-            RecordingMatrixColumnLabels.Add("HCam 1");
-            RecordingMatrixColumnLabels.Add("HCam 2");
-            RecordingMatrixColumnLabels.Add("PC 1");
-            RecordingMatrixColumnLabels.Add("PC 2");
-            RecordingMatrixColumnLabels.Add("PC 3");
-            RecordingMatrixColumnLabels.Add("オフ");
+            foreach (var o in def.Outputs)
+                RecordingMatrixRowLabels.Add(o.Label);
+            foreach (var i in def.Inputs)
+                RecordingMatrixColumnLabels.Add(i.Label);
 
-            // 2行×9列のマトリクスを生成
-            ActionLogger.LogProcessing("マトリクス生成", "2行×11列のマトリクスを生成中");
-            for (int row = 1; row <= 2; row++)
+            int rowCount = def.RowCount;
+            int columnCount = def.ColumnCount;
+            ActionLogger.LogProcessing("マトリクス生成", $"{rowCount}行×{columnCount}列のマトリクスを生成中");
+            for (int row = 1; row <= rowCount; row++)
             {
-                for (int column = 1; column <= 11; column++)
+                for (int column = 1; column <= columnCount; column++)
                 {
                     RecordingMatrixButtons.Add(new EsportsMatrixButton
                     {
@@ -122,8 +484,8 @@ namespace Shibaura_ControlHub.ViewModels
                     });
                 }
             }
-            
-            ActionLogger.LogResult("録画マトリクス初期化完了", $"行数: 2, 列数: 11");
+
+            ActionLogger.LogResult("録画マトリクス初期化完了", $"行数: {rowCount}, 列数: {columnCount}");
             ActionLogger.LogProcessingComplete("録画マトリクス初期化");
 
             LoadRecordingMatrixSelectionForCurrentMode();
@@ -159,9 +521,24 @@ namespace Shibaura_ControlHub.ViewModels
             SaveRecordingMatrixSelection();
             
             // UDP送信機能は削除されました
+            RoutingRequested?.Invoke(button.Row, button.Column, SwitcherDefinitions.MatrixIdRecording);
 
             ActionLogger.LogResult("マトリクス選択完了", $"行: {button.Row}, 列: {button.Column}, 選択状態: {button.IsSelected}");
             ActionLogger.LogProcessingComplete("マトリクス選択処理");
+        }
+
+        private void RequestRoutingForCurrentSelection()
+        {
+            var selected = RecordingMatrixButtons.Where(b => b.IsSelected).ToList();
+            if (selected.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var b in selected)
+            {
+                RoutingRequested?.Invoke(b.Row, b.Column, SwitcherDefinitions.MatrixIdRecording);
+            }
         }
 
         /// <summary>

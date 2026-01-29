@@ -73,6 +73,7 @@ namespace Shibaura_ControlHub.ViewModels
         // Commands
         public ICommand SelectEsportsPresetCommand { get; private set; } = null!;
         public ICommand CallEsportsPresetCommand { get; private set; } = null!;
+        public ICommand RegisterEsportsPresetCommand { get; private set; } = null!;
         public ICommand SelectEsportsMatrixCommand { get; private set; } = null!;
 
         public EsportsViewModel(string mode)
@@ -117,6 +118,7 @@ namespace Shibaura_ControlHub.ViewModels
         {
             SelectEsportsPresetCommand = new RelayCommand<int>(SelectEsportsPreset);
             CallEsportsPresetCommand = new RelayCommand(CallEsportsPreset);
+            RegisterEsportsPresetCommand = new RelayCommand<int>(RegisterEsportsPreset);
             SelectEsportsMatrixCommand = new RelayCommand<EsportsMatrixButton>(SelectEsportsMatrix);
         }
 
@@ -204,7 +206,7 @@ namespace Shibaura_ControlHub.ViewModels
             EsportsMatrixColumnLabels.Add("再 3");
             EsportsMatrixColumnLabels.Add("リプ 1");
             EsportsMatrixColumnLabels.Add("リプ 2");
-            EsportsMatrixColumnLabels.Add("オフ");
+            EsportsMatrixColumnLabels.Add("web2");
 
             // 7行×18列のマトリクスを生成
             ActionLogger.LogProcessing("マトリクス生成", "7行×18列のマトリクスを生成中");
@@ -226,7 +228,7 @@ namespace Shibaura_ControlHub.ViewModels
             ActionLogger.LogProcessing("保存された選択状態の読み込み", "選択状態を読み込み中");
             LoadEsportsSelectionForCurrentMode();
             
-            ActionLogger.LogResult("Esportsマトリクス初期化完了", $"行数: 7, 列数: 18");
+            ActionLogger.LogResult("Esportsマトリクス初期化完了", $"行数: 7, 列数: 19");
             ActionLogger.LogProcessingComplete("Esportsマトリクス初期化");
         }
 
@@ -246,6 +248,66 @@ namespace Shibaura_ControlHub.ViewModels
                 // JSONファイルに即座に保存
                 ModeSettingsManager.SaveModeSettings(CurrentMode, _modeSettingsData);
             }
+        }
+
+        /// <summary>
+        /// esportsプリセットを登録
+        /// </summary>
+        private void RegisterEsportsPreset(int presetNumber)
+        {
+            if (presetNumber <= 0 || presetNumber > 8)
+            {
+                ActionLogger.LogError("Esportsプリセット登録", $"無効なプリセット番号: {presetNumber}");
+                return;
+            }
+
+            var result = CustomDialog.Show(
+                $"プリセット{presetNumber}を登録しますか？\n現在のマトリクス選択状態を保存します。",
+                "プリセット登録確認",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            ActionLogger.LogAction("Esportsプリセット登録", $"プリセット番号: {presetNumber}");
+
+            if (_modeSettingsData == null)
+            {
+                ActionLogger.LogError("Esportsプリセット登録", "設定データが無効です");
+                return;
+            }
+
+            // 現在のマトリクス選択状態を取得
+            var currentSelection = EsportsMatrixButtons
+                .Where(b => b.IsSelected)
+                .ToDictionary(b => b.Row, b => b.Column);
+
+            if (currentSelection.Count == 0)
+            {
+                ActionLogger.LogError("Esportsプリセット登録", "マトリクスが選択されていません");
+                CustomDialog.Show("マトリクスが選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // EsportsPresetsを初期化
+            EnsureEsportsPresetData(_modeSettingsData);
+
+            // プリセットに現在の選択状態を保存
+            _modeSettingsData.EsportsPresets[presetNumber] = new Dictionary<int, int>(currentSelection);
+
+            // JSONファイルに即座に保存
+            ModeSettingsManager.SaveModeSettings(CurrentMode, _modeSettingsData);
+
+            // 登録後、呼び出し済み状態に変更
+            CalledEsportsPresetNumber = presetNumber;
+            SelectedEsportsPresetNumber = presetNumber;
+
+            var selectionList = currentSelection.OrderBy(s => s.Key).Select(s => $"行{s.Key}→列{s.Value}").ToList();
+            var detail = string.Join(", ", selectionList);
+            ActionLogger.LogResult("Esportsプリセット登録成功", $"プリセット{presetNumber}を登録しました: {detail}");
         }
 
         /// <summary>
@@ -438,7 +500,7 @@ namespace Shibaura_ControlHub.ViewModels
 
             const int presetCount = 8;
             const int rowCount = 7;
-            const int columnCount = 18;
+            const int columnCount = 19;
 
             for (int preset = 1; preset <= presetCount; preset++)
             {

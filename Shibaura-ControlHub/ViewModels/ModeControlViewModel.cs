@@ -21,6 +21,7 @@ namespace Shibaura_ControlHub.ViewModels
     public class ModeControlViewModel : INotifyPropertyChanged
     {
     private readonly EquipmentControlService _controlService;
+    private readonly TcpCommunicationService _tcpCommunicationService;
     private int _currentMode = 0;
     private string _selectedEquipmentCategory = "";
     private EquipmentStatus? _selectedEquipment;
@@ -126,6 +127,33 @@ namespace Shibaura_ControlHub.ViewModels
     {
         get => RecordingViewModel.RecordingMatrixColumnLabels;
         set => RecordingViewModel.RecordingMatrixColumnLabels = value;
+    }
+
+    /// <summary>
+    /// キャプチャマトリクスボタンリスト
+    /// </summary>
+    public ObservableCollection<EsportsMatrixButton> CaptureMatrixButtons
+    {
+        get => CaptureViewModel.CaptureMatrixButtons;
+        set => CaptureViewModel.CaptureMatrixButtons = value;
+    }
+
+    /// <summary>
+    /// キャプチャマトリクスの行ラベル
+    /// </summary>
+    public ObservableCollection<string> CaptureMatrixRowLabels
+    {
+        get => CaptureViewModel.CaptureMatrixRowLabels;
+        set => CaptureViewModel.CaptureMatrixRowLabels = value;
+    }
+
+    /// <summary>
+    /// キャプチャマトリクスの列ラベル
+    /// </summary>
+    public ObservableCollection<string> CaptureMatrixColumnLabels
+    {
+        get => CaptureViewModel.CaptureMatrixColumnLabels;
+        set => CaptureViewModel.CaptureMatrixColumnLabels = value;
     }
 
     /// <summary>
@@ -262,9 +290,9 @@ namespace Shibaura_ControlHub.ViewModels
     public bool EsportsAvailable => CurrentMode == 3;
 
     /// <summary>
-    /// 現在のモードで映像録画を表示するか（モード3限定）
+    /// 現在のモードで映像録画を表示するか（授業・遠隔・eスポーツの全モードで表示）
     /// </summary>
-    public bool RecordingAvailable => CurrentMode == 3;
+    public bool RecordingAvailable => CurrentMode == 1 || CurrentMode == 2 || CurrentMode == 3;
 
     /// <summary>
     /// 現在のモードで照明制御を表示するか（モード2限定）
@@ -372,6 +400,12 @@ namespace Shibaura_ControlHub.ViewModels
                 {
                     EsportsViewModel.SaveEsportsCurrentSelection();
                 }
+
+                ActionLogger.LogProcessing("キャプチャマトリクスの保存", "キャプチャマトリクス選択を保存中");
+                if (CaptureViewModel != null)
+                {
+                    CaptureViewModel.SaveCaptureCurrentSelection();
+                }
                 
                 // オレンジ状態（選択されているが呼び出されていない）のプリセットを濃い青（呼び出し済み）に戻す
                 ActionLogger.LogProcessing("プリセット状態の更新", "選択中のプリセットを呼び出し済み状態に更新");
@@ -396,6 +430,7 @@ namespace Shibaura_ControlHub.ViewModels
                 if (EsportsViewModel != null) EsportsViewModel.CurrentMode = value;
                 if (RecordingViewModel != null) RecordingViewModel.CurrentMode = value;
                 if (LightingViewModel != null) LightingViewModel.CurrentMode = value;
+                if (CaptureViewModel != null) CaptureViewModel.CurrentMode = value;
                 
                 ActionLogger.LogProcessing("UI更新", "プロパティ変更を通知");
             OnPropertyChanged();
@@ -404,6 +439,7 @@ namespace Shibaura_ControlHub.ViewModels
             OnPropertyChanged(nameof(EsportsAvailable));
             OnPropertyChanged(nameof(RecordingAvailable));
             OnPropertyChanged(nameof(LightingAvailable));
+            OnPropertyChanged(nameof(CaptureAvailable));
             OnPropertyChanged(nameof(MicrophoneAvailable));
             OnPropertyChanged(nameof(CameraAvailable));
             OnPropertyChanged(nameof(SwitcherAvailable));
@@ -420,15 +456,32 @@ namespace Shibaura_ControlHub.ViewModels
                 OnPropertyChanged(nameof(RecordingMatrixButtons));
                 OnPropertyChanged(nameof(RecordingMatrixRowLabels));
                 OnPropertyChanged(nameof(RecordingMatrixColumnLabels));
+                OnPropertyChanged(nameof(CaptureMatrixButtons));
+                OnPropertyChanged(nameof(CaptureMatrixRowLabels));
+                OnPropertyChanged(nameof(CaptureMatrixColumnLabels));
                 OnPropertyChanged(nameof(SwitcherMatrixButtons));
                 OnPropertyChanged(nameof(SwitcherMatrixRowLabels));
                 OnPropertyChanged(nameof(SwitcherMatrixColumnLabels));
                 
                 ActionLogger.LogResult("モード変更完了", $"モードが {modeName} に変更されました");
                 ActionLogger.LogProcessingComplete("モード変更処理");
+
+                // モード切替TCPコマンド送信（授業=1: SS 1, 遠隔=2: SS 2, eスポーツ=3: SS 3、送信後切断）
+                if (value >= 1 && value <= 3)
+                {
+                    SendModeSwitchCommandAsync(value);
+                }
             }
         }
     }
+
+        /// <summary>
+        /// モード切替コマンドをTCPで送信する（接続→送信→切断）。送信先は monitoring_equipment.json の「デジタルシグナルプロセッサ」。
+        /// </summary>
+        private async void SendModeSwitchCommandAsync(int modeNumber)
+        {
+            await _tcpCommunicationService.SendModeSwitchCommandToDspAsync(modeNumber, MonitoringList);
+        }
 
 
     /// <summary>
@@ -462,19 +515,6 @@ namespace Shibaura_ControlHub.ViewModels
     public bool IsCamera1Selected
     {
         get => CameraViewModel.IsCamera1Selected;
-    }
-
-    /// <summary>
-    /// 選択中のAIスチル番号
-    /// </summary>
-    public int SelectedAiStillNumber
-    {
-        get => CameraViewModel.SelectedAiStillNumber;
-        set
-            {
-                CameraViewModel.SelectedAiStillNumber = value;
-            OnPropertyChanged();
-        }
     }
 
     /// <summary>
@@ -543,6 +583,7 @@ namespace Shibaura_ControlHub.ViewModels
         {
             // 1. サービスの初期化
             _controlService = new EquipmentControlService();
+            _tcpCommunicationService = new TcpCommunicationService();
 
             // 2. 機器リストの設定
             MicrophoneList = microphoneList;
@@ -559,9 +600,15 @@ namespace Shibaura_ControlHub.ViewModels
             CameraViewModel = new CameraViewModel(mode, cameraList);
             SwitcherViewModel = new SwitcherViewModel(mode, switcherList);
             EsportsViewModel = new EsportsViewModel(mode);
-            RecordingViewModel = new RecordingViewModel(mode);
+            RecordingViewModel = new RecordingViewModel(mode, monitoringList);
             LightingViewModel = new LightingViewModel(mode);
             CaptureViewModel = new CaptureViewModel(mode);
+
+            // スイッチャーを触るのは「スイッチャー画面」と「録画画面」の2箇所。いずれも SwitcherViewModel.RouteToAtem(row, column, matrixId) で同一ATEMへ送信。
+            RecordingViewModel.RoutingRequested += (row, column, matrixId) =>
+            {
+                SwitcherViewModel.RouteToAtem(row, column, matrixId);
+            };
             
             // 各ViewModelのモードをモード番号で設定
             if (modeNumber > 0)

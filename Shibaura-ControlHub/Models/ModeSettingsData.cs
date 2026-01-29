@@ -82,6 +82,23 @@ namespace Shibaura_ControlHub.Models
         /// 例: CaptureSelections[1] = 3 (行1は列3が選択されている)
         /// </summary>
         public Dictionary<int, int> CaptureSelections { get; set; } = new Dictionary<int, int>();
+
+        /// <summary>
+        /// カメラごとの選択中のプリセット番号
+        /// 例: CameraSelectedPresetNumbers["PTZカメラ-1"] = 3 (カメラ1はプリセット3が選択されている)
+        /// </summary>
+        public Dictionary<string, int> CameraSelectedPresetNumbers { get; set; } = new Dictionary<string, int>();
+
+        /// <summary>
+        /// カメラごとの呼び出し済みプリセット番号
+        /// 例: CameraCalledPresetNumbers["PTZカメラ-1"] = 3 (カメラ1はプリセット3が呼び出し済み)
+        /// </summary>
+        public Dictionary<string, int> CameraCalledPresetNumbers { get; set; } = new Dictionary<string, int>();
+
+        /// <summary>
+        /// カメラ1のオートフレーミング（トラッキング）のオン/オフ状態
+        /// </summary>
+        public bool IsTrackingOn { get; set; } = false;
     }
 }
 

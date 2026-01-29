@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Shibaura_ControlHub.Views.ModeControlView"
+<UserControl x:Class="Shibaura_ControlHub.Views.ModeControlView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -164,7 +164,7 @@
                         </Button.Style>
                     </Button>
 
-                    <!-- モード2限定: 映像録画 -->
+                    <!-- 映像録画（授業・遠隔・eスポーツで表示） -->
                     <Button Content="映像録画"
                             Command="{Binding SelectEquipmentCategoryCommand}"
                             CommandParameter="Recording"
@@ -193,7 +193,7 @@
                             Padding="15,12"
                             FontSize="14"
                             FontWeight="SemiBold"
-                            Visibility="{Binding LightingAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Visibility="Collapsed">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
                                 <Style.Triggers>
@@ -339,10 +339,7 @@
                     </local:RecordingView>
 
                     <!-- 照明制御 用UI -->
-                    <local:LightingView>
-                        <local:LightingView.Visibility>
-                            <Binding Path="DataContext.SelectedEquipmentCategory" RelativeSource="{RelativeSource AncestorType=UserControl}" Converter="{StaticResource CategoryMatchConverter}" ConverterParameter="Lighting"/>
-                        </local:LightingView.Visibility>
+                    <local:LightingView Visibility="Collapsed">
                         <local:LightingView.DataContext>
                             <Binding Path="LightingViewModel"/>
                         </local:LightingView.DataContext>

@@ -5,6 +5,36 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" 
              d:DesignHeight="1280" d:DesignWidth="1920">
+    <UserControl.Resources>
+        <Style x:Key="RecordingRecButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
+            <Setter Property="Background" Value="#6B7280"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="20,12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Width" Value="140"/>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.6"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="RecordingStopButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
+            <Setter Property="Background" Value="#6B7280"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="20,12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Width" Value="140"/>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.6"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
     <StackPanel Margin="12">
         <TextBlock Text="映像録画" Style="{StaticResource PageTitleStyle}"/>
 
@@ -29,7 +59,7 @@
                     <ItemsControl Grid.Row="0" Grid.Column="1" ItemsSource="{Binding RecordingMatrixColumnLabels}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <UniformGrid Rows="1" Columns="11"/>
+                                <UniformGrid Rows="1" Columns="10"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
@@ -67,7 +97,7 @@
                     <ItemsControl Grid.Row="1" Grid.Column="1" ItemsSource="{Binding RecordingMatrixButtons}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <UniformGrid Rows="2" Columns="11"/>
+                                <UniformGrid Rows="2" Columns="10"/>
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
@@ -126,8 +156,9 @@
                 </StackPanel>
             </Border>
         </StackPanel>
-        <StackPanel Margin="0,0,0,12">
-            <TextBlock Text="全体録画" Style="{StaticResource SectionHeaderStyle}"/>
+        <!-- 全体録画（下に余白を多めに取り、個別録画と区切る） -->
+        <StackPanel Margin="0,0,0,28">
+            <TextBlock Text="全体録画" Style="{StaticResource SectionHeaderStyle}" Foreground="#FACC15"/>
             <Border BorderThickness="0" BorderBrush="Transparent" 
             CornerRadius="12" Padding="16" Background="{StaticResource PanelBrush}">
                 <Grid>
@@ -136,54 +167,45 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                        <TextBlock Text="待機中" FontSize="14" FontWeight="Bold" Foreground="#10B981"
-                           Margin="0,0,0,4"/>
-                        <TextBlock Text="00:00:00" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextBrush}"/>
+                        <TextBlock Text="{Binding OverallTimecode}" FontSize="48" FontWeight="Bold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOverallRecording}" Value="True">
+                                            <Setter Property="Foreground" Value="#EF4444"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- 録画開始ボタン -->
-                        <Button Content="スタート" 
-                        Padding="20,12" FontSize="14" FontWeight="Bold"
-                        Width="140">
+                        <Button Content="Rec"
+                                Command="{Binding StartOverallRecordingCommand}">
                             <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-                                    <Style.Setters>
-                                        <Setter Property="Background" Value="#10B981"/>
-                                        <Setter Property="Foreground" Value="White"/>
-                                    </Style.Setters>
+                                <Style TargetType="Button" BasedOn="{StaticResource RecordingRecButtonStyle}">
                                     <Style.Triggers>
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter Property="Opacity" Value="0.6"/>
-                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsOverallRecording}" Value="True">
+                                            <Setter Property="Background" Value="#EF4444"/>
+                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Button.Style>
                         </Button>
 
                         <!-- 録画停止ボタン -->
-                        <Button Content="ストップ"
-                        Padding="20,12" FontSize="14" FontWeight="Bold"
-                        Width="140"
-                        Margin="20,0,0,0">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-                                    <Style.Setters>
-                                        <Setter Property="Background" Value="#EF4444"/>
-                                        <Setter Property="Foreground" Value="White"/>
-                                    </Style.Setters>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter Property="Opacity" Value="0.6"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                        <Button Content="Stop"
+                                Command="{Binding StopOverallRecordingCommand}"
+                                Style="{StaticResource RecordingStopButtonStyle}"
+                                Margin="20,0,0,0"/>
                     </StackPanel>
                 </Grid>
             </Border>
         </StackPanel>
-        <StackPanel Margin="0,0,0,12">
+        <!-- 個別録画（隙間は少し） -->
+        <StackPanel Margin="0,0,0,6">
             <TextBlock Text="録画1" Style="{StaticResource SectionHeaderStyle}"/>
             <Border BorderThickness="0" BorderBrush="Transparent" 
                     CornerRadius="12" Padding="16" Background="{StaticResource PanelBrush}">
@@ -193,49 +215,39 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                        <TextBlock Text="待機中" FontSize="14" FontWeight="Bold" Foreground="#10B981"
-                                   Margin="0,0,0,4"/>
-                        <TextBlock Text="00:00:00" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextBrush}"/>
+                        <TextBlock Text="{Binding Recording1Timecode}" FontSize="48" FontWeight="Bold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsRecording1}" Value="True">
+                                            <Setter Property="Foreground" Value="#EF4444"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- 録画開始ボタン -->
-                        <Button Content="スタート" 
-                                Padding="20,12" FontSize="14" FontWeight="Bold"
-                                Width="140">
+                        <Button Content="Rec"
+                                Command="{Binding StartRecording1Command}">
                             <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-                                    <Style.Setters>
-                                        <Setter Property="Background" Value="#10B981"/>
-                                        <Setter Property="Foreground" Value="White"/>
-                                    </Style.Setters>
+                                <Style TargetType="Button" BasedOn="{StaticResource RecordingRecButtonStyle}">
                                     <Style.Triggers>
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter Property="Opacity" Value="0.6"/>
-                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsRecording1}" Value="True">
+                                            <Setter Property="Background" Value="#EF4444"/>
+                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Button.Style>
                         </Button>
 
                         <!-- 録画停止ボタン -->
-                        <Button Content="ストップ"
-                                Padding="20,12" FontSize="14" FontWeight="Bold"
-                                Width="140"
-                                Margin="20,0,0,0">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-                                    <Style.Setters>
-                                        <Setter Property="Background" Value="#EF4444"/>
-                                        <Setter Property="Foreground" Value="White"/>
-                                    </Style.Setters>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter Property="Opacity" Value="0.6"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                        <Button Content="Stop"
+                                Command="{Binding StopRecording1Command}"
+                                Style="{StaticResource RecordingStopButtonStyle}"
+                                Margin="20,0,0,0"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -250,49 +262,39 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                        <TextBlock Text="待機中" FontSize="14" FontWeight="Bold" Foreground="#10B981"
-                           Margin="0,0,0,4"/>
-                        <TextBlock Text="00:00:00" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextBrush}"/>
+                        <TextBlock Text="{Binding Recording2Timecode}" FontSize="48" FontWeight="Bold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsRecording2}" Value="True">
+                                            <Setter Property="Foreground" Value="#EF4444"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- 録画開始ボタン -->
-                        <Button Content="スタート" 
-                        Padding="20,12" FontSize="14" FontWeight="Bold"
-                        Width="140">
+                        <Button Content="Rec"
+                                Command="{Binding StartRecording2Command}">
                             <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-                                    <Style.Setters>
-                                        <Setter Property="Background" Value="#10B981"/>
-                                        <Setter Property="Foreground" Value="White"/>
-                                    </Style.Setters>
+                                <Style TargetType="Button" BasedOn="{StaticResource RecordingRecButtonStyle}">
                                     <Style.Triggers>
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter Property="Opacity" Value="0.6"/>
-                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsRecording2}" Value="True">
+                                            <Setter Property="Background" Value="#EF4444"/>
+                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Button.Style>
                         </Button>
 
                         <!-- 録画停止ボタン -->
-                        <Button Content="ストップ"
-                        Padding="20,12" FontSize="14" FontWeight="Bold"
-                        Width="140"
-                        Margin="20,0,0,0">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-                                    <Style.Setters>
-                                        <Setter Property="Background" Value="#EF4444"/>
-                                        <Setter Property="Foreground" Value="White"/>
-                                    </Style.Setters>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter Property="Opacity" Value="0.6"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                        <Button Content="Stop"
+                                Command="{Binding StopRecording2Command}"
+                                Style="{StaticResource RecordingStopButtonStyle}"
+                                Margin="20,0,0,0"/>
                     </StackPanel>
                 </Grid>
             </Border>
