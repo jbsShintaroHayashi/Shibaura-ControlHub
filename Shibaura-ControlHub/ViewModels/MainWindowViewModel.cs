@@ -42,6 +42,7 @@ namespace Shibaura_ControlHub.ViewModels
             Mode1Command = new RelayCommand(SelectMode1);
             Mode2Command = new RelayCommand(SelectMode2);
             ExecuteCommand = new RelayCommand(ExecuteControl, CanExecute);
+            ClearHistoryCommand = new RelayCommand(ClearHistory);
 
             // 自動更新タイマーを開始
             InitializeAutoRefreshTimer();
@@ -231,6 +232,15 @@ namespace Shibaura_ControlHub.ViewModels
         private void UpdateHistoryCount()
         {
             OperationHistoryCount = OperationHistory.Count;
+        }
+
+        /// <summary>
+        /// 操作履歴をクリア
+        /// </summary>
+        private void ClearHistory()
+        {
+            OperationHistory.Clear();
+            UpdateHistoryCount();
         }
 
         /// <summary>
