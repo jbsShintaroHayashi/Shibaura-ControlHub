@@ -226,8 +226,18 @@ namespace Shibaura_ControlHub.ViewModels
             OnPropertyChanged(nameof(RecordingMatrixRowLabels));
             OnPropertyChanged(nameof(RecordingMatrixColumnLabels));
 
-            // モード変更に伴い、復元された録画出力（REC1/REC2）をスイッチャーへ適用
-            RequestRoutingForCurrentSelection();
+            // モード変更に伴い、復元された録画マトリクス選択をATEMへルーティング送信（録画のルーティングも変更する）
+            var selected = RecordingMatrixButtons.Where(b => b.IsSelected).ToList();
+            if (selected.Count > 0)
+            {
+                var selectionSummary = string.Join(", ", selected.Select(b => $"Row{b.Row}->Col{b.Column}"));
+                ActionLogger.LogProcessing("録画ルーティング送信", $"モード変更に伴い録画で選択していたものをATEMに適用します (選択数: {selected.Count}) [{selectionSummary}]");
+                RequestRoutingForCurrentSelection();
+            }
+            else
+            {
+                ActionLogger.LogProcessing("録画ルーティング送信", "モード変更時: 録画マトリクスに選択がありません（スキップ）");
+            }
         }
 
         /// <summary>
@@ -479,7 +489,6 @@ namespace Shibaura_ControlHub.ViewModels
                     {
                         Row = row,
                         Column = column,
-                        DisplayText = $"{row}-{column}",
                         IsSelected = false
                     });
                 }
@@ -527,6 +536,9 @@ namespace Shibaura_ControlHub.ViewModels
             ActionLogger.LogProcessingComplete("マトリクス選択処理");
         }
 
+        /// <summary>
+        /// 現在の録画マトリクス選択に合わせてATEMへルーティングを送信する。モード変更時およびユーザーが録画マトリクスを選択したときに呼ばれる。
+        /// </summary>
         private void RequestRoutingForCurrentSelection()
         {
             var selected = RecordingMatrixButtons.Where(b => b.IsSelected).ToList();
@@ -575,9 +587,9 @@ namespace Shibaura_ControlHub.ViewModels
         }
 
         /// <summary>
-        /// 録画マトリクスの選択状態を保存（行ごとの選択形式）
+        /// 録画マトリクスの選択状態を保存（行ごとの選択形式）。モード切替前に呼び出してモードごとの状態を保存する。
         /// </summary>
-        private void SaveRecordingMatrixSelection()
+        public void SaveRecordingMatrixSelection()
         {
             if (_modeSettingsData == null || CurrentMode == 0)
             {

@@ -89,48 +89,44 @@ namespace Shibaura_ControlHub.Services
 
                 ActionLogger.LogProcessing("ATEM接続開始", $"IP: {ipAddress}, Port: {port}");
 
-                // ATEMクライアントの作成と接続（非同期）
+                // ATEMクライアントの作成と接続（COM は STA/UI スレッドで実行する必要があるため Dispatcher で実行）
                 var client = new AtemSwitcherClient();
 
-                _ = Task.Run(async () =>
+                _ = dispatcher.InvokeAsync(async () =>
                 {
                     try
                     {
                         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
-                        await client.ConnectAsync(ipAddress, cts.Token).ConfigureAwait(false);
+                        await client.ConnectAsync(ipAddress, cts.Token).ConfigureAwait(true);
 
                         ActionLogger.LogResult("ATEM接続成功",
                             $"ATEMスイッチャーに接続しました: {ipAddress}:{port} (スイッチャー名: {targetSwitcher.Name})");
                         ActionLogger.LogProcessingComplete("スイッチャー接続");
 
-                        dispatcher.Invoke(() =>
+                        try
                         {
-                            try
-                            {
-                                onConnected(client);
-                                ActionLogger.LogAction("ATEMクライアント設定", "SwitcherViewModelにATEMクライアントを設定しました");
-                            }
-                            catch (Exception ex)
-                            {
-                                ActionLogger.LogError("ATEMクライアント設定エラー",
-                                    $"コールバック実行中にエラーが発生しました: {ex.Message}");
-                            }
-                        });
+                            onConnected(client);
+                            ActionLogger.LogAction("ATEMクライアント設定", "SwitcherViewModelにATEMクライアントを設定しました");
+                        }
+                        catch (Exception ex)
+                        {
+                            ActionLogger.LogError("ATEMクライアント設定エラー",
+                                $"コールバック実行中にエラーが発生しました: {ex.Message}");
+                        }
                     }
                     catch (OperationCanceledException)
                     {
                         ActionLogger.LogError("ATEM接続失敗",
                             $"接続タイムアウト: {ipAddress} への接続が{timeoutSeconds}秒以内に完了しませんでした");
                     }
-                }).ContinueWith(task =>
-                {
-                    if (task.IsFaulted && task.Exception != null)
+                    catch (Exception ex)
                     {
-                        var exceptionMessage = string.Join("; ",
-                            task.Exception.Flatten().InnerExceptions.Select(e => e.Message));
+                        var exceptionMessage = ex.Message;
+                        if (ex.InnerException != null)
+                            exceptionMessage += "; " + ex.InnerException.Message;
                         ActionLogger.LogError("ATEM接続タスク失敗", $"タスク例外: {exceptionMessage}");
                     }
-                }, TaskContinuationOptions.OnlyOnFaulted);
+                });
             }
             catch (Exception ex)
             {

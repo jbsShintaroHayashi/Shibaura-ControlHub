@@ -10,11 +10,10 @@ namespace Shibaura_ControlHub.Models
     {
         private int _row;
         private int _column;
-        private string _displayText = string.Empty;
         private bool _isSelected;
 
         /// <summary>
-        /// 行番号（1-7）
+        /// 行番号（1始まり）
         /// </summary>
         public int Row
         {
@@ -27,7 +26,7 @@ namespace Shibaura_ControlHub.Models
         }
 
         /// <summary>
-        /// 列番号（1-17）
+        /// 列番号（1始まり）
         /// </summary>
         public int Column
         {
@@ -35,19 +34,6 @@ namespace Shibaura_ControlHub.Models
             set
             {
                 _column = value;
-                OnPropertyChanged();
-            }
-        }
-
-        /// <summary>
-        /// ボタンに表示するテキスト
-        /// </summary>
-        public string DisplayText
-        {
-            get => _displayText;
-            set
-            {
-                _displayText = value;
                 OnPropertyChanged();
             }
         }

@@ -70,8 +70,8 @@ namespace Shibaura_ControlHub.Utils
                     new("HCam1", 4),
                     new("HCam2", 5),
                     new("講師", 10),
-                    new("PcA", 8),
-                    new("PcB", 9),
+                    new("PC-A", 8),
+                    new("PC-B", 9),
                 });
 
             // 録画マトリクス: 2行×10列（録画1/2 → REC1/REC2）
@@ -92,8 +92,8 @@ namespace Shibaura_ControlHub.Utils
                     new("HCam 1", 4),
                     new("HCam 2", 5),
                     new("講師", 10),
-                    new("PcA", 8),
-                    new("PcB", 9),
+                    new("PC-A", 8),
+                    new("PC-B", 9),
                 });
 
             return dict;

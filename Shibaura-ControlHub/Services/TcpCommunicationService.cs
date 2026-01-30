@@ -54,6 +54,48 @@ namespace Shibaura_ControlHub.Services
         }
 
         /// <summary>
+        /// TCPでバイトデータを送信し、レスポンスを読み取って返す（タイムアウト付き）。DSP の GA 問い合わせなどに使用。
+        /// </summary>
+        /// <param name="host">接続先ホスト</param>
+        /// <param name="port">ポート番号</param>
+        /// <param name="sendData">送信するバイト列</param>
+        /// <param name="receiveTimeoutMs">受信タイムアウト[ms]</param>
+        public async Task<string> SendAndReceiveAsync(string host, int port, byte[] sendData, int receiveTimeoutMs = 3000)
+        {
+            if (sendData == null || sendData.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            using var client = new TcpClient();
+            await client.ConnectAsync(host, port);
+            using var stream = client.GetStream();
+            stream.ReadTimeout = receiveTimeoutMs;
+            stream.WriteTimeout = 5000;
+
+            await stream.WriteAsync(sendData, 0, sendData.Length);
+
+            var buffer = new byte[4096];
+            var sb = new StringBuilder();
+            try
+            {
+                while (true)
+                {
+                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                    if (bytesRead <= 0) break;
+                    sb.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));
+                    if (bytesRead < buffer.Length) break;
+                }
+            }
+            catch (System.IO.IOException)
+            {
+                // タイムアウトまたは切断
+            }
+
+            return sb.ToString();
+        }
+
+        /// <summary>
         /// TCP経由でデータを送信
         /// </summary>
         public async Task<string> SendCommandAsync(string ipAddress, int port, string command)

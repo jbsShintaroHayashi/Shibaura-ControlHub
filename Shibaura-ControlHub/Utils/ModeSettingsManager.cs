@@ -270,10 +270,6 @@ namespace Shibaura_ControlHub.Utils
                 settings.SwitcherSelections = new Dictionary<int, int>();
             if (settings.SwitcherPresets == null)
                 settings.SwitcherPresets = new Dictionary<int, Dictionary<int, int>>();
-            if (settings.EsportsSelections == null)
-                settings.EsportsSelections = new Dictionary<int, int>();
-            if (settings.EsportsPresets == null)
-                settings.EsportsPresets = new Dictionary<int, Dictionary<int, int>>();
             if (settings.RecordingSelections == null)
                 settings.RecordingSelections = new Dictionary<int, int>();
             if (settings.MicrophoneFaderValues == null || settings.MicrophoneFaderValues.Length == 0)

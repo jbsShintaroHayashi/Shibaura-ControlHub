@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using Shibaura_ControlHub.Models;
+using Shibaura_ControlHub.Services;
 using Shibaura_ControlHub;
 using Shibaura_ControlHub.Utils;
 using Shibaura_ControlHub.Views;
@@ -34,7 +35,21 @@ namespace Shibaura_ControlHub.ViewModels
         /// モード変更時に更新される
         /// </summary>
         private ModeSettingsData? _modeSettingsData;
-        
+
+        /// <summary>
+        /// モニタリング機器リスト（Bose DSP の送信先取得用）
+        /// </summary>
+        private readonly IEnumerable<EquipmentStatus>? _monitoringList;
+
+        /// <summary>
+        /// デジタルミキサ（Bose ControlSpace DSP）制御。DigitalMixerManager でフェーダー・ミュートを送信。
+        /// </summary>
+        private readonly DigitalMixerManager? _digitalMixerManager;
+
+        /// <summary>
+        /// DSP から状態を取得して UI に反映中は true。この間はフェーダー/ミュート変更で DSP へ送信しない。
+        /// </summary>
+        private bool _isUpdatingFromDsp;
 
         public ObservableCollection<EquipmentStatus> MicrophoneList { get; set; }
         
@@ -58,9 +73,11 @@ namespace Shibaura_ControlHub.ViewModels
         /// </summary>
         public ObservableCollection<bool> MicrophoneMuteStates { get; set; } = new ObservableCollection<bool>();
 
-        public MicrophoneViewModel(string mode, ObservableCollection<EquipmentStatus> microphoneList)
+        public MicrophoneViewModel(string mode, ObservableCollection<EquipmentStatus> microphoneList, IEnumerable<EquipmentStatus>? monitoringList = null)
         {
             MicrophoneList = microphoneList;
+            _monitoringList = monitoringList;
+            _digitalMixerManager = DigitalMixerManager.CreateFromMonitoringList(monitoringList);
             SetCurrentModeFromName(mode);
             
             // モード設定を読み込む（JSONファイルから常に最新の設定を読み込む）
@@ -72,30 +89,17 @@ namespace Shibaura_ControlHub.ViewModels
                 // LoadModeSettings()で既に_allModeSettingsに設定が読み込まれている
                 _modeSettingsData = _allModeSettings[modeNumber];
                 
-                if (_modeSettingsData == null)
-                {
-                    ActionLogger.LogError("設定読み込み", $"モード{modeNumber}の設定データがnullです");
-                    return;
-                }
+                if (_modeSettingsData == null) return;
                 
-                ActionLogger.LogAction("フェーダー値読み込み", $"モード{modeNumber}のフェーダー値を読み込み中");
-                if (_modeSettingsData.MicrophoneFaderValues != null && _modeSettingsData.MicrophoneFaderValues.Length == 4)
-                {
-                    ActionLogger.LogProcessing("マイクフェーダー値", $"読み込み値: [{string.Join(", ", _modeSettingsData.MicrophoneFaderValues)}]");
-                }
-                if (_modeSettingsData.OutputFaderValues != null && _modeSettingsData.OutputFaderValues.Length == 2)
-                {
-                    ActionLogger.LogProcessing("出力フェーダー値", $"読み込み値: [{string.Join(", ", _modeSettingsData.OutputFaderValues)}]");
-                }
-                
-                // フェーダー値のコレクションを初期化（JSONファイルの値を使用）
+                // 音量はJSONに保存・読み込みしない。フェーダー/ミュートはデフォルトで初期化し、DSP取得で表示する
                 InitializeFaderValuesFromJson();
                 
                 // ミュート状態のコレクションを初期化（JSONファイルの値を使用）
                 InitializeMuteStatesFromJson();
             }
             SetupFaderValueChangedHandler();
-            ApplyStoredSettingsToHardware();
+            // 音量はJSONに保存・読み込みしない。起動時はDSPから現在の状態を取得して表示する
+            _ = FetchAndDisplayCurrentStateFromDspAsync();
         }
 
         /// <summary>
@@ -112,23 +116,111 @@ namespace Shibaura_ControlHub.ViewModels
             LoadModeSettings(ModeSettingsManager.GetModeName(CurrentMode));
             
             _modeSettingsData = _allModeSettings[modeNumber];
-            
-            // フェーダー値のコレクションをクリアして再初期化（JSONファイルの値を使用）
-            MicrophoneFaderValues.Clear();
-            OutputFaderValues.Clear();
-            InitializeFaderValuesFromJson();
-            
-            // ミュート状態のコレクションをクリアして再初期化（JSONファイルの値を使用）
-            MicrophoneMuteStates.Clear();
-            OutputMuteStates.Clear();
-            InitializeMuteStatesFromJson();
-            
-            OnPropertyChanged(nameof(MicrophoneFaderValues));
-            OnPropertyChanged(nameof(OutputFaderValues));
-            OnPropertyChanged(nameof(MicrophoneMuteStates));
-            OnPropertyChanged(nameof(OutputMuteStates));
 
-            ApplyStoredSettingsToHardware();
+            // モード切替時はDSPから現在の状態を取得して表示（クリア／70%初期化は不要。取得結果で上書きする）
+            _ = FetchAndDisplayCurrentStateFromDspAsync();
+        }
+
+        /// <summary>
+        /// DSP からゲイン・ミュート状態を取得し、UI に反映する。
+        /// 取得できなかった場合は 0 dB 相当（70%）・ミュート解除で表示する。
+        /// </summary>
+        private async Task FetchAndDisplayCurrentStateFromDspAsync()
+        {
+            if (_digitalMixerManager == null) return;
+
+            var result = await _digitalMixerManager.GetAllGainStateAsync().ConfigureAwait(false);
+
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                _isUpdatingFromDsp = true;
+                try
+                {
+                    const double DefaultPercent0Db = 70.0; // 0 dB = ユニティゲイン
+
+                    if (result == null)
+                    {
+                        // 取得できなかった場合: 0 dB 相当で 70%、ミュート解除に設定
+                        ApplyFaderAndMuteToUi(DefaultPercent0Db, isMuted: false, micCount: 4, outCount: 2);
+                    }
+                    else
+                    {
+                        for (int i = 0; i < 4 && i < result.VolumeDb.Length; i++)
+                        {
+                            double percent = DigitalMixerManager.DecibelToPercentForGain(result.VolumeDb[i]);
+                            if (i < MicrophoneFaderValues.Count)
+                                MicrophoneFaderValues[i] = percent;
+                            else
+                                MicrophoneFaderValues.Add(percent);
+                        }
+                        for (int i = 0; i < 2 && i + 4 < result.VolumeDb.Length; i++)
+                        {
+                            double percent = DigitalMixerManager.DecibelToPercentForGain(result.VolumeDb[i + 4]);
+                            if (i < OutputFaderValues.Count)
+                                OutputFaderValues[i] = percent;
+                            else
+                                OutputFaderValues.Add(percent);
+                        }
+                        for (int i = 0; i < 4 && i < result.IsMuted.Length; i++)
+                        {
+                            if (i < MicrophoneMuteStates.Count)
+                                MicrophoneMuteStates[i] = result.IsMuted[i];
+                            else
+                                MicrophoneMuteStates.Add(result.IsMuted[i]);
+                        }
+                        for (int i = 0; i < 2 && i + 4 < result.IsMuted.Length; i++)
+                        {
+                            if (i < OutputMuteStates.Count)
+                                OutputMuteStates[i] = result.IsMuted[i + 4];
+                            else
+                                OutputMuteStates.Add(result.IsMuted[i + 4]);
+                        }
+                    }
+                    OnPropertyChanged(nameof(MicrophoneFaderValues));
+                    OnPropertyChanged(nameof(OutputFaderValues));
+                    OnPropertyChanged(nameof(MicrophoneMuteStates));
+                    OnPropertyChanged(nameof(OutputMuteStates));
+                }
+                finally
+                {
+                    _isUpdatingFromDsp = false;
+                }
+            });
+        }
+
+        /// <summary>
+        /// 指定したフェーダー％とミュート状態を全チャンネルに適用（取得失敗時の 0 dB / 70% 用）。
+        /// </summary>
+        private void ApplyFaderAndMuteToUi(double percent, bool isMuted, int micCount, int outCount)
+        {
+            for (int i = 0; i < micCount; i++)
+            {
+                if (i < MicrophoneFaderValues.Count)
+                    MicrophoneFaderValues[i] = percent;
+                else
+                    MicrophoneFaderValues.Add(percent);
+            }
+            for (int i = 0; i < outCount; i++)
+            {
+                if (i < OutputFaderValues.Count)
+                    OutputFaderValues[i] = percent;
+                else
+                    OutputFaderValues.Add(percent);
+            }
+            for (int i = 0; i < micCount; i++)
+            {
+                if (i < MicrophoneMuteStates.Count)
+                    MicrophoneMuteStates[i] = isMuted;
+                else
+                    MicrophoneMuteStates.Add(isMuted);
+            }
+            for (int i = 0; i < outCount; i++)
+            {
+                if (i < OutputMuteStates.Count)
+                    OutputMuteStates[i] = isMuted;
+                else
+                    OutputMuteStates.Add(isMuted);
+            }
         }
 
         /// <summary>
@@ -157,39 +249,19 @@ namespace Shibaura_ControlHub.ViewModels
         {
             if (modeNumber == 0) return;
             
-            ActionLogger.LogAction("設定読み込み", $"モード{modeNumber}の設定をJSONファイルから読み込み中");
-            
             // 常にJSONファイルから最新の設定を読み込む
             var settings = ModeSettingsManager.LoadModeSettings(modeNumber);
             
             if (settings.MicrophoneFaderValues == null || settings.MicrophoneFaderValues.Length == 0)
-            {
-                ActionLogger.LogProcessing("マイクフェーダー値初期化", "JSONファイルに値が存在しないため、50.0で初期化");
                 settings.MicrophoneFaderValues = new double[4] { 50.0, 50.0, 50.0, 50.0 };
-            }
-            else
-            {
-                ActionLogger.LogProcessing("マイクフェーダー値読み込み", $"読み込み値: [{string.Join(", ", settings.MicrophoneFaderValues)}]");
-            }
-            
             if (settings.OutputFaderValues == null || settings.OutputFaderValues.Length == 0)
-            {
-                ActionLogger.LogProcessing("出力フェーダー値初期化", "JSONファイルに値が存在しないため、50.0で初期化");
                 settings.OutputFaderValues = new double[2] { 50.0, 50.0 };
-            }
-            else
-            {
-                ActionLogger.LogProcessing("出力フェーダー値読み込み", $"読み込み値: [{string.Join(", ", settings.OutputFaderValues)}]");
-            }
             // ミュート状態はJSONファイルの値を使用（初期化しない）
             
             _allModeSettings[modeNumber] = settings;
             
             if (modeNumber == CurrentMode)
-            {
                 _modeSettingsData = _allModeSettings[modeNumber];
-                ActionLogger.LogResult("設定読み込み完了", $"モード{modeNumber}の設定を読み込みました");
-            }
         }
 
         /// <summary>
@@ -227,29 +299,14 @@ namespace Shibaura_ControlHub.ViewModels
         /// </summary>
         private void MicrophoneFaderValues_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
+            if (_isUpdatingFromDsp) return;
             if (e.NewItems != null && e.NewStartingIndex >= 0 && e.NewStartingIndex < MicrophoneFaderValues.Count)
             {
                 int micNumber = e.NewStartingIndex + 1;
                 if (e.NewItems.Count > 0 && e.NewItems[0] is double value)
                 {
-                    ActionLogger.LogAction("マイクフェーダー値変更", $"マイク番号: {micNumber}, 値: {value:0.0}");
-                    
-                    ActionLogger.LogProcessingStart("マイクフェーダー値更新", $"マイク{micNumber}の値を{value:0.0}に更新");
-                    
-                    // UDP送信機能は削除されました
-                    
-                    string modeName = CurrentModeName;
-                    ActionLogger.LogProcessing("フェーダー値の保存", $"モード: {modeName}に保存");
+                    _ = _digitalMixerManager?.SetGainVolumeByChannelAsync(micNumber, value);
                     SaveCurrentFaderValuesToEquipmentSettings();
-                    
-                    if (_modeSettingsData != null && CurrentMode != 0)
-                    {
-                        ActionLogger.LogProcessing("JSONファイルへの保存", $"モード: {modeName}の設定をJSONファイルに保存");
-                        ModeSettingsManager.SaveModeSettings(CurrentMode, _modeSettingsData);
-                    }
-                    
-                    ActionLogger.LogResult("マイクフェーダー値更新完了", $"マイク{micNumber}の値を{value:0.0}に更新しました");
-                    ActionLogger.LogProcessingComplete("マイクフェーダー値更新");
                 }
             }
         }
@@ -259,27 +316,15 @@ namespace Shibaura_ControlHub.ViewModels
         /// </summary>
         private void OutputFaderValues_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
+            if (_isUpdatingFromDsp) return;
             if (e.NewItems != null && e.NewStartingIndex >= 0 && e.NewStartingIndex < OutputFaderValues.Count)
             {
                 int outputNumber = e.NewStartingIndex + 1;
                 if (e.NewItems.Count > 0 && e.NewItems[0] is double value)
                 {
-                    ActionLogger.LogAction("出力フェーダー値変更", $"出力番号: {outputNumber}, 値: {value:0.0}");
-                    
-                    ActionLogger.LogProcessingStart("出力フェーダー値更新", $"出力{outputNumber}の値を{value:0.0}に更新");
-                    
-                    string modeName = CurrentModeName;
-                    ActionLogger.LogProcessing("出力フェーダー値の保存", $"モード: {modeName}に保存");
+                    int dspChannel = outputNumber + 4;
+                    _ = _digitalMixerManager?.SetGainVolumeByChannelAsync(dspChannel, value);
                     SaveCurrentOutputFaderValuesToEquipmentSettings();
-                    
-                    if (_modeSettingsData != null && CurrentMode != 0)
-                    {
-                        ActionLogger.LogProcessing("JSONファイルへの保存", $"モード: {modeName}の設定をJSONファイルに保存");
-                        ModeSettingsManager.SaveModeSettings(CurrentMode, _modeSettingsData);
-                    }
-                    
-                    ActionLogger.LogResult("出力フェーダー値更新完了", $"出力{outputNumber}の値を{value:0.0}に更新しました");
-                    ActionLogger.LogProcessingComplete("出力フェーダー値更新");
                 }
             }
         }
@@ -346,11 +391,7 @@ namespace Shibaura_ControlHub.ViewModels
         /// </summary>
         private void InitializeFaderValuesFromJson()
         {
-            if (_modeSettingsData == null)
-            {
-                ActionLogger.LogError("フェーダー値初期化", "_modeSettingsDataがnullです");
-                return;
-            }
+            if (_modeSettingsData == null) return;
             
             // イベントハンドラを一時的に解除して、読み込み時のイベント発火を防ぐ
             MicrophoneFaderValues.CollectionChanged -= MicrophoneFaderValues_CollectionChanged;
@@ -358,57 +399,12 @@ namespace Shibaura_ControlHub.ViewModels
             
             try
             {
-                // マイクフェーダー値の初期化（JSONファイルの値を使用）
-                if (_modeSettingsData.MicrophoneFaderValues != null && 
-                    _modeSettingsData.MicrophoneFaderValues.Length >= 4)
-                {
-                    if (_modeSettingsData.MicrophoneFaderValues.Length > 4)
-                    {
-                        ActionLogger.LogProcessing("マイクフェーダー値修正", $"8個の値が検出されました。最初の4個のみを使用します。");
-                    }
-                    
-                    for (int i = 0; i < 4; i++)
-                    {
-                        double value = _modeSettingsData.MicrophoneFaderValues[i];
-                        MicrophoneFaderValues.Add(value);
-                        ActionLogger.LogProcessing("マイクフェーダー値設定", $"インデックス{i}: {value}");
-                    }
-                }
-                else
-                {
-                    ActionLogger.LogProcessing("マイクフェーダー値初期化", "JSONファイルに値が存在しないため、50.0で初期化");
-                    // JSONファイルに値が存在しない場合は50.0で初期化
-                    for (int i = 0; i < 4; i++)
-                    {
-                        MicrophoneFaderValues.Add(50.0);
-                    }
-                }
-
-                // 出力フェーダー値の初期化（JSONファイルの値を使用）
-                if (_modeSettingsData.OutputFaderValues != null && 
-                    _modeSettingsData.OutputFaderValues.Length >= 2)
-                {
-                    if (_modeSettingsData.OutputFaderValues.Length > 2)
-                    {
-                        ActionLogger.LogProcessing("出力フェーダー値修正", $"{_modeSettingsData.OutputFaderValues.Length}個の値が検出されました。最初の2個のみを使用します。");
-                    }
-                    
-                    for (int i = 0; i < 2; i++)
-                    {
-                        double value = _modeSettingsData.OutputFaderValues[i];
-                        OutputFaderValues.Add(value);
-                        ActionLogger.LogProcessing("出力フェーダー値設定", $"インデックス{i}: {value}");
-                    }
-                }
-                else
-                {
-                    ActionLogger.LogProcessing("出力フェーダー値初期化", "JSONファイルに値が存在しないため、50.0で初期化");
-                    // JSONファイルに値が存在しない場合は50.0で初期化
-                    for (int i = 0; i < 2; i++)
-                    {
-                        OutputFaderValues.Add(50.0);
-                    }
-                }
+                // 音量はJSONに保存・読み込みしない。ユニティ（0dB＝70%）で初期化し、DSP取得で上書きする
+                const double DefaultFaderPercent = 70.0;
+                for (int i = 0; i < 4; i++)
+                    MicrophoneFaderValues.Add(DefaultFaderPercent);
+                for (int i = 0; i < 2; i++)
+                    OutputFaderValues.Add(DefaultFaderPercent);
             }
             finally
             {
@@ -431,48 +427,11 @@ namespace Shibaura_ControlHub.ViewModels
             
             try
             {
-                // 出力ミュート状態の初期化（JSONファイルの値を使用）
-                // 出力は2個のみなので、4個保存されている場合は最初の2個だけを使用
-                if (_modeSettingsData.OutputMuteStates != null && 
-                    _modeSettingsData.OutputMuteStates.Length >= 2)
-                {
-                    // 4個保存されている場合は最初の2個だけを使用
-                    if (_modeSettingsData.OutputMuteStates.Length > 2)
-                    {
-                        ActionLogger.LogProcessing("出力ミュート状態修正", $"{_modeSettingsData.OutputMuteStates.Length}個の値が検出されました。最初の2個のみを使用します。");
-                    }
-                    
-                    for (int i = 0; i < 2; i++)
-                    {
-                        OutputMuteStates.Add(_modeSettingsData.OutputMuteStates[i]);
-                    }
-                }
-                else
-                {
-                    // JSONファイルに値が存在しない場合はfalseで初期化
-                    for (int i = 0; i < 2; i++)
-                    {
-                        OutputMuteStates.Add(false);
-                    }
-                }
-
-                // マイクミュート状態の初期化（JSONファイルの値を使用）
-                if (_modeSettingsData.MicrophoneMuteStates != null && 
-                    _modeSettingsData.MicrophoneMuteStates.Length == 4)
-                {
-                    for (int i = 0; i < 4; i++)
-                    {
-                        MicrophoneMuteStates.Add(_modeSettingsData.MicrophoneMuteStates[i]);
-                    }
-                }
-                else
-                {
-                    // JSONファイルに値が存在しない場合はfalseで初期化
-                    for (int i = 0; i < 4; i++)
-                    {
-                        MicrophoneMuteStates.Add(false);
-                    }
-                }
+                // 音量はJSONに保存・読み込みしない。ミュート解除で初期化し、DSP取得で上書きする
+                for (int i = 0; i < 2; i++)
+                    OutputMuteStates.Add(false);
+                for (int i = 0; i < 4; i++)
+                    MicrophoneMuteStates.Add(false);
             }
             finally
             {
@@ -483,11 +442,36 @@ namespace Shibaura_ControlHub.ViewModels
         }
 
         /// <summary>
-        /// JSONから読み込んだフェーダー・ミュート値を機材へ反映
+        /// JSONから読み込んだフェーダー・ミュート値を DigitalMixerManager で Bose DSP へ反映
         /// </summary>
         private void ApplyStoredSettingsToHardware()
         {
-            // UDP送信機能は削除されました
+            if (_digitalMixerManager == null) return;
+
+            // マイクフェーダー CH1～4
+            for (int i = 0; i < MicrophoneFaderValues.Count && i < 4; i++)
+            {
+                int ch = i + 1;
+                _ = _digitalMixerManager.SetGainVolumeByChannelAsync(ch, MicrophoneFaderValues[i]);
+            }
+            // 出力フェーダー CH5～6
+            for (int i = 0; i < OutputFaderValues.Count && i < 2; i++)
+            {
+                int ch = i + 5;
+                _ = _digitalMixerManager.SetGainVolumeByChannelAsync(ch, OutputFaderValues[i]);
+            }
+            // マイクミュート CH1～4
+            for (int i = 0; i < MicrophoneMuteStates.Count && i < 4; i++)
+            {
+                int ch = i + 1;
+                _ = _digitalMixerManager.SetGainMuteByChannelAsync(ch, MicrophoneMuteStates[i]);
+            }
+            // 出力ミュート CH5～6
+            for (int i = 0; i < OutputMuteStates.Count && i < 2; i++)
+            {
+                int ch = i + 5;
+                _ = _digitalMixerManager.SetGainMuteByChannelAsync(ch, OutputMuteStates[i]);
+            }
         }
 
 
@@ -496,29 +480,14 @@ namespace Shibaura_ControlHub.ViewModels
         /// </summary>
         private void MicrophoneMuteStates_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
+            if (_isUpdatingFromDsp) return;
             if (e.NewItems != null && e.NewStartingIndex >= 0 && e.NewStartingIndex < MicrophoneMuteStates.Count)
             {
                 int micNumber = e.NewStartingIndex + 1;
                 if (e.NewItems.Count > 0 && e.NewItems[0] is bool isMuted)
                 {
-                    ActionLogger.LogAction("マイクミュート状態変更", $"マイク番号: {micNumber}, ミュート: {(isMuted ? "ON" : "OFF")}");
-                    
-                    ActionLogger.LogProcessingStart("マイクミュート状態更新", $"マイク{micNumber}のミュートを{(isMuted ? "ON" : "OFF")}に更新");
-                    
-                    // UDP送信機能は削除されました
-                    
-                    string modeName = CurrentModeName;
-                    ActionLogger.LogProcessing("ミュート状態の保存", $"モード: {modeName}に保存");
+                    _ = _digitalMixerManager?.SetGainMuteByChannelAsync(micNumber, isMuted);
                     SaveCurrentMuteStatesToEquipmentSettings();
-                    
-                    if (_modeSettingsData != null && CurrentMode != 0)
-                    {
-                        ActionLogger.LogProcessing("JSONファイルへの保存", $"モード: {modeName}の設定をJSONファイルに保存");
-                        ModeSettingsManager.SaveModeSettings(CurrentMode, _modeSettingsData);
-                    }
-                    
-                    ActionLogger.LogResult("マイクミュート状態更新完了", $"マイク{micNumber}のミュートを{(isMuted ? "ON" : "OFF")}に更新しました");
-                    ActionLogger.LogProcessingComplete("マイクミュート状態更新");
                 }
             }
         }
@@ -528,29 +497,15 @@ namespace Shibaura_ControlHub.ViewModels
         /// </summary>
         private void OutputMuteStates_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
+            if (_isUpdatingFromDsp) return;
             if (e.NewItems != null && e.NewStartingIndex >= 0 && e.NewStartingIndex < OutputMuteStates.Count)
             {
                 int outputNumber = e.NewStartingIndex + 1;
                 if (e.NewItems.Count > 0 && e.NewItems[0] is bool isMuted)
                 {
-                    ActionLogger.LogAction("出力ミュート状態変更", $"出力番号: {outputNumber}, ミュート: {(isMuted ? "ON" : "OFF")}");
-                    
-                    ActionLogger.LogProcessingStart("出力ミュート状態更新", $"出力{outputNumber}のミュートを{(isMuted ? "ON" : "OFF")}に更新");
-                    
-                    // UDP送信機能は削除されました
-                    
-                    string modeName = CurrentModeName;
-                    ActionLogger.LogProcessing("ミュート状態の保存", $"モード: {modeName}に保存");
+                    int dspChannel = outputNumber + 4;
+                    _ = _digitalMixerManager?.SetGainMuteByChannelAsync(dspChannel, isMuted);
                     SaveCurrentMuteStatesToEquipmentSettings();
-                    
-                    if (_modeSettingsData != null && CurrentMode != 0)
-                    {
-                        ActionLogger.LogProcessing("JSONファイルへの保存", $"モード: {modeName}の設定をJSONファイルに保存");
-                        ModeSettingsManager.SaveModeSettings(CurrentMode, _modeSettingsData);
-                    }
-                    
-                    ActionLogger.LogResult("出力ミュート状態更新完了", $"出力{outputNumber}のミュートを{(isMuted ? "ON" : "OFF")}に更新しました");
-                    ActionLogger.LogProcessingComplete("出力ミュート状態更新");
                 }
             }
         }

@@ -1,4 +1,3 @@
-using Shibaura_ControlHub.Services;
 using Shibaura_ControlHub.Models;
 using Shibaura_ControlHub.Services;
 using Shibaura_ControlHub.Utils;
@@ -22,10 +21,10 @@ namespace Shibaura_ControlHub
     public partial class MainWindow : Window
     {
         private MenuViewModel? _menuViewModel;
-        private PowerOnViewModel _powerOnViewModel;
-        private ProgressViewModel _progressViewModel;
+        private PowerOnViewModel? _powerOnViewModel;
+        private ProgressViewModel? _progressViewModel;
         private DispatcherTimer? _progressTimer;
-        private ModeControlViewModel _modeControlViewModel;
+        private ModeControlViewModel? _modeControlViewModel;
         private MaintenanceViewModel? _maintenanceViewModel;
         private MaintenanceView? _maintenanceView;
         private bool _isWebView2Initialized = false;
@@ -292,7 +291,16 @@ namespace Shibaura_ControlHub
                 var settings = ModeSettingsManager.LoadModeSettings(modeNumber);
             }
 
-            _modeControlViewModel = new ModeControlViewModel(mode, _microphoneList, _cameraList, _switcherList, _monitoringEquipmentList);
+            // タブレットでモード変更したときに、コマンド受信と同じUDPコマンドを 192.168.0.21 に送信するコールバックを渡す
+            const string ModeCommandTargetHost = "192.168.0.21";
+            const int ModeCommandTargetPort = 9000;
+            _modeControlViewModel = new ModeControlViewModel(
+                mode,
+                _microphoneList,
+                _cameraList,
+                _switcherList,
+                _monitoringEquipmentList,
+                onModeChangedByTablet: modeNum => _ = CommandCommunicationService.SendModeCommandToAsync(ModeCommandTargetHost, ModeCommandTargetPort, modeNum));
             var modeControlView = new ModeControlView();
             modeControlView.DataContext = _modeControlViewModel;
             _currentModeName = mode;

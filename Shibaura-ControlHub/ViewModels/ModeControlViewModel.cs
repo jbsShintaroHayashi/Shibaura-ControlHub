@@ -22,6 +22,7 @@ namespace Shibaura_ControlHub.ViewModels
     {
     private readonly EquipmentControlService _controlService;
     private readonly TcpCommunicationService _tcpCommunicationService;
+    private readonly Action<int>? _onModeChangedByTablet;
     private int _currentMode = 0;
     private string _selectedEquipmentCategory = "";
     private EquipmentStatus? _selectedEquipment;
@@ -34,10 +35,7 @@ namespace Shibaura_ControlHub.ViewModels
     public MicrophoneViewModel MicrophoneViewModel { get; private set; } = null!;
     public CameraViewModel CameraViewModel { get; private set; } = null!;
     public SwitcherViewModel SwitcherViewModel { get; private set; } = null!;
-    public EsportsViewModel EsportsViewModel { get; private set; } = null!;
     public RecordingViewModel RecordingViewModel { get; private set; } = null!;
-    public LightingViewModel LightingViewModel { get; private set; } = null!;
-    public CaptureViewModel CaptureViewModel { get; private set; } = null!;
 
     public ObservableCollection<EquipmentStatus> MicrophoneList { get; set; }
     public ObservableCollection<EquipmentStatus> CameraList { get; set; }
@@ -76,33 +74,6 @@ namespace Shibaura_ControlHub.ViewModels
     }
 
     /// <summary>
-    /// esportsマトリクスボタンリスト
-    /// </summary>
-    public ObservableCollection<EsportsMatrixButton> EsportsMatrixButtons
-    {
-        get => EsportsViewModel.EsportsMatrixButtons;
-        set => EsportsViewModel.EsportsMatrixButtons = value;
-    }
-
-    /// <summary>
-    /// esportsマトリクスの行ラベル
-    /// </summary>
-    public ObservableCollection<string> EsportsMatrixRowLabels
-    {
-        get => EsportsViewModel.EsportsMatrixRowLabels;
-        set => EsportsViewModel.EsportsMatrixRowLabels = value;
-    }
-
-    /// <summary>
-    /// esportsマトリクスの列ラベル
-    /// </summary>
-    public ObservableCollection<string> EsportsMatrixColumnLabels
-    {
-        get => EsportsViewModel.EsportsMatrixColumnLabels;
-        set => EsportsViewModel.EsportsMatrixColumnLabels = value;
-    }
-
-    /// <summary>
     /// 録画マトリクスボタンリスト
     /// </summary>
     public ObservableCollection<EsportsMatrixButton> RecordingMatrixButtons
@@ -127,33 +98,6 @@ namespace Shibaura_ControlHub.ViewModels
     {
         get => RecordingViewModel.RecordingMatrixColumnLabels;
         set => RecordingViewModel.RecordingMatrixColumnLabels = value;
-    }
-
-    /// <summary>
-    /// キャプチャマトリクスボタンリスト
-    /// </summary>
-    public ObservableCollection<EsportsMatrixButton> CaptureMatrixButtons
-    {
-        get => CaptureViewModel.CaptureMatrixButtons;
-        set => CaptureViewModel.CaptureMatrixButtons = value;
-    }
-
-    /// <summary>
-    /// キャプチャマトリクスの行ラベル
-    /// </summary>
-    public ObservableCollection<string> CaptureMatrixRowLabels
-    {
-        get => CaptureViewModel.CaptureMatrixRowLabels;
-        set => CaptureViewModel.CaptureMatrixRowLabels = value;
-    }
-
-    /// <summary>
-    /// キャプチャマトリクスの列ラベル
-    /// </summary>
-    public ObservableCollection<string> CaptureMatrixColumnLabels
-    {
-        get => CaptureViewModel.CaptureMatrixColumnLabels;
-        set => CaptureViewModel.CaptureMatrixColumnLabels = value;
     }
 
     /// <summary>
@@ -203,32 +147,6 @@ namespace Shibaura_ControlHub.ViewModels
             return SwitcherViewModel.GetMatrixButton(row, column);
         }
         return null;
-    }
-
-    /// <summary>
-    /// 選択中のesportsプリセット番号
-    /// </summary>
-    public int SelectedEsportsPresetNumber
-    {
-        get => EsportsViewModel.SelectedEsportsPresetNumber;
-        set
-            {
-                EsportsViewModel.SelectedEsportsPresetNumber = value;
-            OnPropertyChanged();
-        }
-    }
-
-    /// <summary>
-    /// 選択中の照明プリセット番号
-    /// </summary>
-    public int SelectedLightingPresetNumber
-    {
-        get => LightingViewModel.SelectedLightingPresetNumber;
-        set
-            {
-                LightingViewModel.SelectedLightingPresetNumber = value;
-            OnPropertyChanged();
-        }
     }
 
     /// <summary>
@@ -287,8 +205,6 @@ namespace Shibaura_ControlHub.ViewModels
     /// <summary>
     /// 現在のモードでeスポーツ映像選択を表示するか（モード3限定）
     /// </summary>
-    public bool EsportsAvailable => CurrentMode == 3;
-
     /// <summary>
     /// 現在のモードで映像録画を表示するか（授業・遠隔・eスポーツの全モードで表示）
     /// </summary>
@@ -297,13 +213,6 @@ namespace Shibaura_ControlHub.ViewModels
     /// <summary>
     /// 現在のモードで照明制御を表示するか（モード2限定）
     /// </summary>
-    public bool LightingAvailable => CurrentMode == 2;
-
-    /// <summary>
-    /// 現在のモードでキャプチャを表示するか（モード2限定）
-    /// </summary>
-    public bool CaptureAvailable => CurrentMode == 2;
-
     /// <summary>
     /// 現在のモードで使用するコンテンツ（マイク・カメラなど）
     /// </summary>
@@ -395,16 +304,10 @@ namespace Shibaura_ControlHub.ViewModels
                     SwitcherViewModel.SaveSwitcherMatrixSelection();
                 }
                 
-                ActionLogger.LogProcessing("Esportsマトリクスの保存", "Esportsマトリクス選択を保存中");
-                if (EsportsViewModel != null)
+                ActionLogger.LogProcessing("録画マトリクスの保存", "録画マトリクス選択を保存中");
+                if (RecordingViewModel != null)
                 {
-                    EsportsViewModel.SaveEsportsCurrentSelection();
-                }
-
-                ActionLogger.LogProcessing("キャプチャマトリクスの保存", "キャプチャマトリクス選択を保存中");
-                if (CaptureViewModel != null)
-                {
-                    CaptureViewModel.SaveCaptureCurrentSelection();
+                    RecordingViewModel.SaveRecordingMatrixSelection();
                 }
                 
                 // オレンジ状態（選択されているが呼び出されていない）のプリセットを濃い青（呼び出し済み）に戻す
@@ -427,19 +330,13 @@ namespace Shibaura_ControlHub.ViewModels
                 if (MicrophoneViewModel != null) MicrophoneViewModel.CurrentMode = value;
                 if (CameraViewModel != null) CameraViewModel.CurrentMode = value;
                 if (SwitcherViewModel != null) SwitcherViewModel.CurrentMode = value;
-                if (EsportsViewModel != null) EsportsViewModel.CurrentMode = value;
                 if (RecordingViewModel != null) RecordingViewModel.CurrentMode = value;
-                if (LightingViewModel != null) LightingViewModel.CurrentMode = value;
-                if (CaptureViewModel != null) CaptureViewModel.CurrentMode = value;
                 
                 ActionLogger.LogProcessing("UI更新", "プロパティ変更を通知");
             OnPropertyChanged();
             OnPropertyChanged(nameof(EquipmentList));
             OnPropertyChanged(nameof(CurrentModeContent));
-            OnPropertyChanged(nameof(EsportsAvailable));
             OnPropertyChanged(nameof(RecordingAvailable));
-            OnPropertyChanged(nameof(LightingAvailable));
-            OnPropertyChanged(nameof(CaptureAvailable));
             OnPropertyChanged(nameof(MicrophoneAvailable));
             OnPropertyChanged(nameof(CameraAvailable));
             OnPropertyChanged(nameof(SwitcherAvailable));
@@ -450,15 +347,9 @@ namespace Shibaura_ControlHub.ViewModels
                 OnPropertyChanged(nameof(MicrophoneFaderValues));
                 OnPropertyChanged(nameof(OutputFaderValues));
                 OnPropertyChanged(nameof(CameraPresets));
-                OnPropertyChanged(nameof(EsportsMatrixButtons));
-                OnPropertyChanged(nameof(EsportsMatrixRowLabels));
-                OnPropertyChanged(nameof(EsportsMatrixColumnLabels));
                 OnPropertyChanged(nameof(RecordingMatrixButtons));
                 OnPropertyChanged(nameof(RecordingMatrixRowLabels));
                 OnPropertyChanged(nameof(RecordingMatrixColumnLabels));
-                OnPropertyChanged(nameof(CaptureMatrixButtons));
-                OnPropertyChanged(nameof(CaptureMatrixRowLabels));
-                OnPropertyChanged(nameof(CaptureMatrixColumnLabels));
                 OnPropertyChanged(nameof(SwitcherMatrixButtons));
                 OnPropertyChanged(nameof(SwitcherMatrixRowLabels));
                 OnPropertyChanged(nameof(SwitcherMatrixColumnLabels));
@@ -470,6 +361,8 @@ namespace Shibaura_ControlHub.ViewModels
                 if (value >= 1 && value <= 3)
                 {
                     SendModeSwitchCommandAsync(value);
+                    // タブレットでモード変更したとき、コマンド受信と同じUDPコマンドを指定先（例: 192.168.0.21）に送信
+                    _onModeChangedByTablet?.Invoke(value);
                 }
             }
         }
@@ -579,11 +472,13 @@ namespace Shibaura_ControlHub.ViewModels
             ObservableCollection<EquipmentStatus> microphoneList,
             ObservableCollection<EquipmentStatus> cameraList,
             ObservableCollection<EquipmentStatus> switcherList,
-            ObservableCollection<EquipmentStatus> monitoringList)
+            ObservableCollection<EquipmentStatus> monitoringList,
+            Action<int>? onModeChangedByTablet = null)
         {
             // 1. サービスの初期化
             _controlService = new EquipmentControlService();
             _tcpCommunicationService = new TcpCommunicationService();
+            _onModeChangedByTablet = onModeChangedByTablet;
 
             // 2. 機器リストの設定
             MicrophoneList = microphoneList;
@@ -596,13 +491,10 @@ namespace Shibaura_ControlHub.ViewModels
 
             // 3. 各機材ViewModelのインスタンスを作成（モード名からモード番号に変換）
             int modeNumber = ModeSettingsManager.GetModeNumber(mode);
-            MicrophoneViewModel = new MicrophoneViewModel(mode, microphoneList);
+            MicrophoneViewModel = new MicrophoneViewModel(mode, microphoneList, monitoringList);
             CameraViewModel = new CameraViewModel(mode, cameraList);
             SwitcherViewModel = new SwitcherViewModel(mode, switcherList);
-            EsportsViewModel = new EsportsViewModel(mode);
             RecordingViewModel = new RecordingViewModel(mode, monitoringList);
-            LightingViewModel = new LightingViewModel(mode);
-            CaptureViewModel = new CaptureViewModel(mode);
 
             // スイッチャーを触るのは「スイッチャー画面」と「録画画面」の2箇所。いずれも SwitcherViewModel.RouteToAtem(row, column, matrixId) で同一ATEMへ送信。
             RecordingViewModel.RoutingRequested += (row, column, matrixId) =>
@@ -616,10 +508,7 @@ namespace Shibaura_ControlHub.ViewModels
                 MicrophoneViewModel.SetCurrentModeFromName(mode);
                 CameraViewModel.SetCurrentModeFromName(mode);
                 SwitcherViewModel.SetCurrentModeFromName(mode);
-                EsportsViewModel.SetCurrentModeFromName(mode);
                 RecordingViewModel.SetCurrentModeFromName(mode);
-                LightingViewModel.SetCurrentModeFromName(mode);
-                CaptureViewModel.SetCurrentModeFromName(mode);
             }
 
             // 4. 起動時に全モードの設定を読み込む（モードごとに値を保持するため）
@@ -679,14 +568,6 @@ namespace Shibaura_ControlHub.ViewModels
                 {
                     SwitcherViewModel.LoadModeSettingsForModeNumber(modeNumber);
                 }
-                if (EsportsViewModel != null)
-                {
-                    EsportsViewModel.LoadModeSettingsForModeNumber(modeNumber);
-                }
-                if (CaptureViewModel != null)
-                {
-                    CaptureViewModel.LoadModeSettingsForModeNumber(modeNumber);
-                }
             }
             
             ActionLogger.LogResult("全モード設定の読み込み完了", $"全{allModes.Length}モードの設定を読み込みました");
@@ -708,14 +589,6 @@ namespace Shibaura_ControlHub.ViewModels
                 if (SwitcherViewModel != null)
                 {
                     SwitcherViewModel.SelectedSwitcherPresetNumber = settings.SelectedSwitcherPresetNumber;
-                }
-                if (LightingViewModel != null)
-                {
-                    LightingViewModel.SelectedLightingPresetNumber = settings.SelectedLightingPresetNumber;
-                }
-                if (EsportsViewModel != null)
-                {
-                    EsportsViewModel.SelectedEsportsPresetNumber = settings.SelectedEsportsPresetNumber;
                 }
             }
             catch (Exception ex)
@@ -823,12 +696,6 @@ namespace Shibaura_ControlHub.ViewModels
                 SwitcherViewModel.SaveSwitcherMatrixSelection();
             }
             
-            ActionLogger.LogProcessing("Esportsマトリクスの保存", "Esportsマトリクス選択を保存中");
-            if (EsportsViewModel != null)
-            {
-                EsportsViewModel.SaveEsportsCurrentSelection();
-            }
-            
             // オレンジ状態（選択されているが呼び出されていない）のプリセットを濃い青（呼び出し済み）に戻す
             ActionLogger.LogProcessing("プリセット状態の更新", "選択中のプリセットを呼び出し済み状態に更新");
             ResetPresetSelectionStates();
@@ -853,188 +720,13 @@ namespace Shibaura_ControlHub.ViewModels
 
             try
             {
-                // MicrophoneViewModelから設定データを取得
-                ModeSettingsData? settings = null;
-                if (MicrophoneViewModel != null)
-                {
-                    settings = MicrophoneViewModel.GetModeSettingsData(CurrentMode);
-                }
-                
-                if (settings == null)
-                {
-                    // 設定データが存在しない場合は新規作成
-                    settings = new ModeSettingsData();
-                    // マイクと出力のフェーダー値とミュート状態を現在の値で初期化
-                    // マイクは4個のみなので、最初の4個だけを保存
-                    if (MicrophoneViewModel != null)
-                    {
-                        // マイクフェーダー値（4個のみ）
-                        if (MicrophoneViewModel.MicrophoneFaderValues.Count >= 4)
-                        {
-                            settings.MicrophoneFaderValues = new double[4]
-                            {
-                                MicrophoneViewModel.MicrophoneFaderValues[0],
-                                MicrophoneViewModel.MicrophoneFaderValues[1],
-                                MicrophoneViewModel.MicrophoneFaderValues[2],
-                                MicrophoneViewModel.MicrophoneFaderValues[3]
-                            };
-                        }
-                        else
-                        {
-                            var values = new double[4];
-                            for (int i = 0; i < 4; i++)
-                            {
-                                values[i] = i < MicrophoneViewModel.MicrophoneFaderValues.Count 
-                                    ? MicrophoneViewModel.MicrophoneFaderValues[i] : 50.0;
-                            }
-                            settings.MicrophoneFaderValues = values;
-                        }
-                        
-                        // 出力フェーダー値（2個のみ）
-                        if (MicrophoneViewModel.OutputFaderValues.Count >= 2)
-                        {
-                            settings.OutputFaderValues = new double[2]
-                            {
-                                MicrophoneViewModel.OutputFaderValues[0],
-                                MicrophoneViewModel.OutputFaderValues[1]
-                            };
-                        }
-                        else
-                        {
-                            var values = new double[2];
-                            for (int i = 0; i < 2; i++)
-                            {
-                                values[i] = i < MicrophoneViewModel.OutputFaderValues.Count 
-                                    ? MicrophoneViewModel.OutputFaderValues[i] : 50.0;
-                            }
-                            settings.OutputFaderValues = values;
-                        }
-                        
-                        // 出力ミュート状態（2個のみ）
-                        if (MicrophoneViewModel.OutputMuteStates.Count >= 2)
-                        {
-                            settings.OutputMuteStates = new bool[2]
-                            {
-                                MicrophoneViewModel.OutputMuteStates[0],
-                                MicrophoneViewModel.OutputMuteStates[1]
-                            };
-                        }
-                        else
-                        {
-                            settings.OutputMuteStates = new bool[2] { false, false };
-                        }
-                        
-                        // マイクミュート状態（4個のみ）
-                        if (MicrophoneViewModel.MicrophoneMuteStates.Count >= 4)
-                        {
-                            settings.MicrophoneMuteStates = new bool[4]
-                            {
-                                MicrophoneViewModel.MicrophoneMuteStates[0],
-                                MicrophoneViewModel.MicrophoneMuteStates[1],
-                                MicrophoneViewModel.MicrophoneMuteStates[2],
-                                MicrophoneViewModel.MicrophoneMuteStates[3]
-                            };
-                        }
-                        else
-                        {
-                            settings.MicrophoneMuteStates = new bool[4] { false, false, false, false };
-                        }
-                    }
-                }
-                else
-                {
-                    // 設定データが存在する場合でも、最新のフェーダー値とミュート状態を反映
-                    // マイクは4個のみ、出力は2個のみなので、最初の数個だけを保存
-                    if (MicrophoneViewModel != null)
-                    {
-                        // マイクフェーダー値（4個のみ）
-                        if (MicrophoneViewModel.MicrophoneFaderValues.Count >= 4)
-                        {
-                            settings.MicrophoneFaderValues = new double[4]
-                            {
-                                MicrophoneViewModel.MicrophoneFaderValues[0],
-                                MicrophoneViewModel.MicrophoneFaderValues[1],
-                                MicrophoneViewModel.MicrophoneFaderValues[2],
-                                MicrophoneViewModel.MicrophoneFaderValues[3]
-                            };
-                        }
-                        else
-                        {
-                            var values = new double[4];
-                            for (int i = 0; i < 4; i++)
-                            {
-                                values[i] = i < MicrophoneViewModel.MicrophoneFaderValues.Count 
-                                    ? MicrophoneViewModel.MicrophoneFaderValues[i] : 50.0;
-                            }
-                            settings.MicrophoneFaderValues = values;
-                        }
-                        
-                        // 出力フェーダー値（2個のみ）
-                        if (MicrophoneViewModel.OutputFaderValues.Count >= 2)
-                        {
-                            settings.OutputFaderValues = new double[2]
-                            {
-                                MicrophoneViewModel.OutputFaderValues[0],
-                                MicrophoneViewModel.OutputFaderValues[1]
-                            };
-                        }
-                        else
-                        {
-                            var values = new double[2];
-                            for (int i = 0; i < 2; i++)
-                            {
-                                values[i] = i < MicrophoneViewModel.OutputFaderValues.Count 
-                                    ? MicrophoneViewModel.OutputFaderValues[i] : 50.0;
-                            }
-                            settings.OutputFaderValues = values;
-                        }
-                        
-                        // 出力ミュート状態（2個のみ）
-                        if (MicrophoneViewModel.OutputMuteStates.Count >= 2)
-                        {
-                            settings.OutputMuteStates = new bool[2]
-                            {
-                                MicrophoneViewModel.OutputMuteStates[0],
-                                MicrophoneViewModel.OutputMuteStates[1]
-                            };
-                        }
-                        else
-                        {
-                            settings.OutputMuteStates = new bool[2] { false, false };
-                        }
-                        
-                        // マイクミュート状態（4個のみ）
-                        if (MicrophoneViewModel.MicrophoneMuteStates.Count >= 4)
-                        {
-                            settings.MicrophoneMuteStates = new bool[4]
-                            {
-                                MicrophoneViewModel.MicrophoneMuteStates[0],
-                                MicrophoneViewModel.MicrophoneMuteStates[1],
-                                MicrophoneViewModel.MicrophoneMuteStates[2],
-                                MicrophoneViewModel.MicrophoneMuteStates[3]
-                            };
-                        }
-                        else
-                        {
-                            settings.MicrophoneMuteStates = new bool[4] { false, false, false, false };
-                        }
-                    }
-                }
+                // 音量関連は [JsonIgnore] のためJSONに出力されない。その他の設定のみ保存。
+                ModeSettingsData settings = MicrophoneViewModel?.GetModeSettingsData(CurrentMode) ?? new ModeSettingsData();
 
-                // プリセット選択状態を保存
                 if (SwitcherViewModel != null)
                 {
                     settings.SelectedSwitcherPresetNumber = SwitcherViewModel.SelectedSwitcherPresetNumber;
                 }
-                if (LightingViewModel != null)
-                {
-                    settings.SelectedLightingPresetNumber = LightingViewModel.SelectedLightingPresetNumber;
-                }
-                if (EsportsViewModel != null)
-                {
-                    settings.SelectedEsportsPresetNumber = EsportsViewModel.SelectedEsportsPresetNumber;
-                }
-
                 ModeSettingsManager.SaveModeSettings(CurrentMode, settings);
             }
             catch (Exception ex)
@@ -1072,30 +764,43 @@ namespace Shibaura_ControlHub.ViewModels
 
             ActionLogger.LogProcessingStart("機材制御処理", $"モード: {modeName}, 機器: {SelectedEquipment.Name}");
             ActionLogger.LogProcessing("機材制御サービスの実行", "ExecuteModeを呼び出し");
-            
-            _controlService.ExecuteMode(CurrentMode);
 
-            var timestamp = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
-            var historyMessage = $"[{timestamp}] {modeName} - {SelectedEquipment!.Name}を実行";
-
-            OperationHistory.Insert(0, historyMessage);
-            
-            if (OperationHistory.Count > 100)
+            try
             {
-                OperationHistory.RemoveAt(OperationHistory.Count - 1);
+                _controlService.ExecuteMode(CurrentMode);
+
+                var timestamp = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
+                var historyMessage = $"[{timestamp}] {modeName} - {SelectedEquipment!.Name}を実行";
+
+                OperationHistory.Insert(0, historyMessage);
+
+                if (OperationHistory.Count > 100)
+                {
+                    OperationHistory.RemoveAt(OperationHistory.Count - 1);
+                }
+
+                ActionLogger.LogResult("機材制御実行完了", $"モード: {modeName}, 機器: {SelectedEquipment.Name}");
+                ActionLogger.LogProcessingComplete("機材制御処理");
+
+                CustomDialog.Show(
+                    $"機材制御を実行しました。\n\n" +
+                    $"モード: {modeName}\n" +
+                    $"対象機器: {SelectedEquipment.Name}\n" +
+                    $"実行時刻: {timestamp}",
+                    "制御実行完了",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
-
-            ActionLogger.LogResult("機材制御実行完了", $"モード: {modeName}, 機器: {SelectedEquipment.Name}");
-            ActionLogger.LogProcessingComplete("機材制御処理");
-
-            CustomDialog.Show(
-                $"機材制御を実行しました。\n\n" +
-                $"モード: {modeName}\n" +
-                $"対象機器: {SelectedEquipment.Name}\n" +
-                $"実行時刻: {timestamp}",
-                "制御実行完了",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            catch (Exception ex)
+            {
+                ActionLogger.LogError("機材制御実行", $"機材制御に失敗しました: {ex.Message}");
+                ActionLogger.LogProcessingComplete("機材制御処理");
+                CustomDialog.Show(
+                    $"機材制御の実行中にエラーが発生しました。\n\n{ex.Message}",
+                    "機材制御エラー",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
 
@@ -1146,21 +851,6 @@ namespace Shibaura_ControlHub.ViewModels
                 CameraViewModel.ClearPresetSelectionOnly();
             }
 
-            // Esportsプリセット：選択状態をクリア（呼び出し状態は保持）
-            if (EsportsViewModel != null && 
-                EsportsViewModel.SelectedEsportsPresetNumber > 0 && 
-                EsportsViewModel.CalledEsportsPresetNumber != EsportsViewModel.SelectedEsportsPresetNumber)
-            {
-                EsportsViewModel.ClearEsportsPresetSelectionOnly();
-            }
-
-            // 照明プリセット：選択状態をクリア（呼び出し状態は保持）
-            if (LightingViewModel != null && 
-                LightingViewModel.SelectedLightingPresetNumber > 0 && 
-                LightingViewModel.CalledLightingPresetNumber != LightingViewModel.SelectedLightingPresetNumber)
-            {
-                LightingViewModel.ClearLightingPresetSelectionOnly();
-            }
         }
 
         public void Cleanup()
@@ -1172,10 +862,6 @@ namespace Shibaura_ControlHub.ViewModels
                 {
                     MicrophoneViewModel.SaveCurrentFaderValuesToEquipmentSettings();
                     MicrophoneViewModel.SaveCurrentOutputFaderValuesToEquipmentSettings();
-                }
-                if (EsportsViewModel != null)
-                {
-                    EsportsViewModel.SaveEsportsCurrentSelection();
                 }
                 if (SwitcherViewModel != null)
                 {

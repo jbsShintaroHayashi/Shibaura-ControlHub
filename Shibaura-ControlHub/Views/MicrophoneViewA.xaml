@@ -238,7 +238,7 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
-                    <ToggleButton Content="ミュート" Padding="11,7" FontSize="16" FontWeight="Bold" Foreground="White" Background="#9CA3AF" HorizontalAlignment="Center" Margin="0,8,0,0" BorderThickness="0">
+                    <ToggleButton Content="ミュート" Padding="11,7" FontSize="16" FontWeight="Bold" Foreground="White" Background="#9CA3AF" HorizontalAlignment="Center" Margin="0,8,0,0" BorderThickness="0" IsChecked="{Binding MicrophoneMuteStates[2], Mode=TwoWay}">
                         <ToggleButton.Template>
                             <ControlTemplate TargetType="ToggleButton">
                                 <Border x:Name="bg" Background="{TemplateBinding Background}" CornerRadius="3">

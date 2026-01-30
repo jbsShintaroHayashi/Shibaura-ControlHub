@@ -157,7 +157,7 @@
             </Border>
         </StackPanel>
         <!-- 全体録画（下に余白を多めに取り、個別録画と区切る） -->
-        <StackPanel Margin="0,0,0,28">
+        <StackPanel Margin="0,0,0,48">
             <TextBlock Text="全体録画" Style="{StaticResource SectionHeaderStyle}" Foreground="#FACC15"/>
             <Border BorderThickness="0" BorderBrush="Transparent" 
             CornerRadius="12" Padding="16" Background="{StaticResource PanelBrush}">

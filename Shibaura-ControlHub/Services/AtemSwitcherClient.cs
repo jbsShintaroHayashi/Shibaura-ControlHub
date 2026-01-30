@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Interop.BMDSwitcherAPI;
+using BMDSwitcherAPI;
 
 namespace Shibaura_ControlHub.Services;
 
@@ -44,7 +44,12 @@ public sealed class AtemSwitcherClient : IAtemSwitcherClient, IDisposable
         }
         catch (COMException ex)
         {
-            throw new InvalidOperationException("ATEM への接続に失敗しました。Blackmagic ATEM Switchers SDK が正しくインストールされているか確認してください。", ex);
+            // 0x80040154 = REGDB_E_CLASSNOTREG（DLL未登録）の場合のみ regsvr32 を案内
+            const int REGDB_E_CLASSNOTREG = unchecked((int)0x80040154);
+            string message = ex.HResult == REGDB_E_CLASSNOTREG
+                ? "ATEM への接続に失敗しました。別のPCで実行する場合は、そのPCで BMDSwitcherAPI64.dll を管理者として「regsvr32 BMDSwitcherAPI64.dll」で登録してください（DLL は exe と同じフォルダにあります）。"
+                : $"ATEM への接続に失敗しました。IPアドレス・ネットワーク接続・ATEMの電源を確認してください。詳細: {ex.Message}";
+            throw new InvalidOperationException(message, ex);
         }
 
         return Task.CompletedTask;
@@ -100,7 +105,7 @@ public sealed class AtemSwitcherClient : IAtemSwitcherClient, IDisposable
                 while (true)
                 {
                     iterator.Next(out input);
-                    if (input == null)
+                    if (input is null)
                     {
                         break;
                     }
@@ -133,7 +138,8 @@ public sealed class AtemSwitcherClient : IAtemSwitcherClient, IDisposable
                     }
                     finally
                     {
-                        Marshal.ReleaseComObject(input);
+                        if (input is not null)
+                            Marshal.ReleaseComObject((object)input);
                     }
                 }
             }
@@ -141,7 +147,7 @@ public sealed class AtemSwitcherClient : IAtemSwitcherClient, IDisposable
             {
                 if (iterator is not null)
                 {
-                    Marshal.ReleaseComObject(iterator);
+                    Marshal.ReleaseComObject((object)iterator);
                 }
 
                 if (iteratorPtr != IntPtr.Zero)
@@ -186,7 +192,7 @@ public sealed class AtemSwitcherClient : IAtemSwitcherClient, IDisposable
                 while (true)
                 {
                     iterator.Next(out input);
-                    if (input == null)
+                    if (input is null)
                     {
                         break;
                     }
@@ -202,7 +208,8 @@ public sealed class AtemSwitcherClient : IAtemSwitcherClient, IDisposable
                     }
                     finally
                     {
-                        Marshal.ReleaseComObject(input);
+                        if (input is not null)
+                            Marshal.ReleaseComObject((object)input);
                     }
                 }
             }
@@ -210,7 +217,7 @@ public sealed class AtemSwitcherClient : IAtemSwitcherClient, IDisposable
             {
                 if (iterator is not null)
                 {
-                    Marshal.ReleaseComObject(iterator);
+                    Marshal.ReleaseComObject((object)iterator);
                 }
 
                 if (iteratorPtr != IntPtr.Zero)

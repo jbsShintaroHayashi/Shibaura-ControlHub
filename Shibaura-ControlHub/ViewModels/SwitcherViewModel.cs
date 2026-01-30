@@ -237,7 +237,6 @@ namespace Shibaura_ControlHub.ViewModels
                     {
                         Row = row,
                         Column = column,
-                        DisplayText = "",
                         IsSelected = false
                     });
                 }
@@ -452,6 +451,12 @@ namespace Shibaura_ControlHub.ViewModels
         public void SetAtemClient(IAtemSwitcherClient? atemClient)
         {
             _atemClient = atemClient;
+            _isAtemConnected = atemClient != null;
+            if (atemClient != null && string.IsNullOrEmpty(_atemIpAddress))
+            {
+                _atemIpAddress = SwitcherList?.FirstOrDefault(s =>
+                    s.Name.Contains("マトリクススイッチャ") || s.Name.Contains("スイッチャ"))?.IpAddress;
+            }
             ActionLogger.LogAction("ATEMクライアント設定", $"SwitcherViewModelにATEMクライアントを設定しました");
 
             // ATEMクライアントが設定された場合、現在の選択状態をATEMに適用
@@ -463,16 +468,18 @@ namespace Shibaura_ControlHub.ViewModels
         }
 
         /// <summary>
-        /// 現在の選択状態をATEMに送信（非同期）
+        /// 現在の選択状態をATEMに送信（非同期）。送信失敗時に切断と判断し、再接続を1回試行してリトライする。
         /// </summary>
-        private void SendCurrentSelectionToAtem()
+        /// <param name="allowReconnect">送信失敗時に再接続を試行するか（再帰呼び出し時は false）</param>
+        private void SendCurrentSelectionToAtem(bool allowReconnect = true)
         {
             if (_atemClient == null) return;
 
             var selected = SwitcherMatrixButtons.Where(b => b.IsSelected).ToList();
             if (!selected.Any()) return;
 
-            _ = Task.Run(async () =>
+            // COM 呼び出しは作成したスレッド（UI/STA）で行う必要があるため Dispatcher で実行
+            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
             {
                 foreach (var b in selected)
                 {
@@ -493,6 +500,12 @@ namespace Shibaura_ControlHub.ViewModels
                     catch (Exception ex)
                     {
                         ActionLogger.LogError("ATEMルーティングエラー", ex.Message);
+                        _isAtemConnected = false;
+                        if (allowReconnect && await TryReconnectAtemAsync())
+                        {
+                            SendCurrentSelectionToAtem(allowReconnect: false);
+                            return;
+                        }
                     }
                 }
             });
@@ -650,6 +663,38 @@ namespace Shibaura_ControlHub.ViewModels
         }
 
         /// <summary>
+        /// ATEM 切断を検出したときに再接続を試行する。
+        /// </summary>
+        /// <returns>再接続に成功した場合 true</returns>
+        private async Task<bool> TryReconnectAtemAsync()
+        {
+            if (_atemClient == null) return false;
+
+            var ip = _atemIpAddress ?? SwitcherList?.FirstOrDefault(s =>
+                s.Name.Contains("マトリクススイッチャ") || s.Name.Contains("スイッチャ"))?.IpAddress;
+            if (string.IsNullOrWhiteSpace(ip))
+            {
+                ActionLogger.LogError("ATEM再接続", "再接続用のIPアドレスが取得できません");
+                return false;
+            }
+
+            try
+            {
+                ActionLogger.LogProcessing("ATEM再接続", $"再接続を試行します: {ip}");
+                await _atemClient.ConnectAsync(ip, CancellationToken.None);
+                _isAtemConnected = true;
+                ActionLogger.LogResult("ATEM再接続成功", $"IPアドレス: {ip}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ActionLogger.LogError("ATEM再接続失敗", $"{ip}: {ex.Message}");
+                _isAtemConnected = false;
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Atem接続を初期化
         /// </summary>
         private async void InitializeAtemConnection()
@@ -747,17 +792,30 @@ namespace Shibaura_ControlHub.ViewModels
             int auxIndex = def.Outputs[row - 1].AuxIndex0Based;
             int inputIndex = def.Inputs[column - 1].InputIndex1Based;
 
-            _ = Task.Run(async () =>
+            // COM 呼び出しは作成したスレッド（UI/STA）で行う必要があるため Dispatcher で実行
+            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
             {
                 try
                 {
-                    ActionLogger.LogProcessing("Atem送信", $"AUX{auxIndex + 1}に入力{inputIndex}をルーティング");
+                    ActionLogger.LogAction("ATEMルーティング送信", $"Row{row} -> Col{column} (AUX{auxIndex + 1} -> Input{inputIndex})");
                     await _atemClient.RouteAuxAsync(auxIndex, inputIndex, CancellationToken.None);
-                    ActionLogger.LogResult("Atem送信成功", $"AUX{auxIndex + 1}に入力{inputIndex}をルーティングしました");
                 }
                 catch (Exception ex)
                 {
-                    ActionLogger.LogError("Atem送信エラー", $"AUX{auxIndex + 1}に入力{inputIndex}をルーティング中にエラー: {ex.Message}");
+                    ActionLogger.LogError("ATEMルーティングエラー", ex.Message);
+                    _isAtemConnected = false;
+                    if (await TryReconnectAtemAsync())
+                    {
+                        try
+                        {
+                            await _atemClient.RouteAuxAsync(auxIndex, inputIndex, CancellationToken.None);
+                            ActionLogger.LogAction("ATEMルーティング送信", $"Row{row} -> Col{column} (再接続後リトライ成功)");
+                        }
+                        catch (Exception retryEx)
+                        {
+                            ActionLogger.LogError("ATEMルーティングエラー", $"リトライ失敗: {retryEx.Message}");
+                        }
+                    }
                 }
             });
         }

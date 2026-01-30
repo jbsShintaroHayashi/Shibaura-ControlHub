@@ -41,20 +41,28 @@ namespace Shibaura_ControlHub.Services
         /// <param name="modeNumber">モード番号（1、2、3）</param>
         public void ExecuteMode(int modeNumber)
         {
-            switch (modeNumber)
+            try
             {
-                case 1:
-                    ExecuteMode1();
-                    break;
-                case 2:
-                    ExecuteMode2();
-                    break;
-                case 3:
-                    // TODO: モード3の実装
-                    Utils.ActionLogger.LogAction("モード3実行", "モード3を実行しました");
-                    break;
-                default:
-                    throw new ArgumentException($"未知のモード番号: {modeNumber}");
+                switch (modeNumber)
+                {
+                    case 1:
+                        ExecuteMode1();
+                        break;
+                    case 2:
+                        ExecuteMode2();
+                        break;
+                    case 3:
+                        // TODO: モード3の実装
+                        Utils.ActionLogger.LogAction("モード3実行", "モード3を実行しました");
+                        break;
+                    default:
+                        throw new ArgumentException($"未知のモード番号: {modeNumber}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.ActionLogger.LogError("機材制御", $"モード{modeNumber}の実行に失敗しました: {ex.Message}");
+                throw;
             }
         }
         

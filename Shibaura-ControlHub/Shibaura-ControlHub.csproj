@@ -7,10 +7,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
     <!-- AnyCPU で 64bit プロセスで起動するため Prefer32Bit を false に（ATEM 64bit SDK 利用時は BMDSwitcherAPI64.dll を regsvr32 で登録すること） -->
     <Prefer32Bit>false</Prefer32Bit>
-    <Platforms>AnyCPU;x86</Platforms>
+    <Platforms>AnyCPU;x86;x64</Platforms>
+    <!-- 参照アセンブリ（ref\）を出力に含めない -->
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    <!-- Release 時は PDB を出力しない（配布サイズ削減。デバッグが必要な場合は true に変更） -->
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup>
@@ -40,10 +44,26 @@
     <PackageReference Include="Shibaura_Lib" Version="1.1.0" />
   </ItemGroup>
 
+  <!-- BMDSwitcherAPI64.dll: lib\ATEM の COM 型ライブラリを参照（tlbimp でラッパー生成） -->
   <ItemGroup>
-    <Reference Include="Interop.BMDSwitcherAPI">
-      <HintPath>..\..\..\..\..\..\tools\Blackmagic_ATEM_Switchers_SDK_10.1\Blackmagic ATEM Switchers SDK 10.1\Windows\include\Interop.BMDSwitcherAPI.dll</HintPath>
-    </Reference>
+    <COMFileReference Include="$(ProjectDir)lib\ATEM\BMDSwitcherAPI64.dll">
+      <WrapperTool>tlbimp</WrapperTool>
+    </COMFileReference>
   </ItemGroup>
+
+  <!-- 実行時に BMDSwitcherAPI64.dll を読み込めるよう出力にコピー（README.txt はコピーしない） -->
+  <ItemGroup>
+    <None Update="lib\ATEM\BMDSwitcherAPI64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>BMDSwitcherAPI64.dll</Link>
+      <Visible>false</Visible>
+    </None>
+    <None Remove="lib\ATEM\README.txt" />
+  </ItemGroup>
+
+  <!-- ビルド後に出力から不要なファイルを削除 -->
+  <Target Name="RemoveUnnecessaryOutputFiles" AfterTargets="Build">
+    <RemoveDir Directories="$(OutputPath)ref" Condition="Exists('$(OutputPath)ref')" />
+  </Target>
 
 </Project>

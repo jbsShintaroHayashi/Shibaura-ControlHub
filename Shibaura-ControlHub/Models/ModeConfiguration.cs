@@ -56,11 +56,6 @@ namespace Shibaura_ControlHub.Models
         public bool Mode2RecordingAvailable => true;
 
         /// <summary>
-        /// モード2で照明制御が利用可能か
-        /// </summary>
-        public bool Mode2LightingAvailable => true;
-
-        /// <summary>
         /// モード3でマイクが利用可能か
         /// </summary>
         public bool Mode3MicrophoneAvailable => true;
@@ -79,11 +74,6 @@ namespace Shibaura_ControlHub.Models
         /// モード3で映像録画が利用可能か
         /// </summary>
         public bool Mode3RecordingAvailable => true;
-
-        /// <summary>
-        /// モード3で照明制御が利用可能か
-        /// </summary>
-        public bool Mode3LightingAvailable => true;
 
         /// <summary>
         /// プログレスバーが0%から100%まで到達するまでの時間（秒）

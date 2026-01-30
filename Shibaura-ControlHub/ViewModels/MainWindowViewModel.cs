@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using Shibaura_ControlHub.Models;
 using Shibaura_ControlHub.Services;
+using Shibaura_ControlHub.Utils;
 using Shibaura_ControlHub.Views;
 
 namespace Shibaura_ControlHub.ViewModels
@@ -148,45 +149,57 @@ namespace Shibaura_ControlHub.ViewModels
                 return;
             }
 
-            // 実際の制御処理を実行
-            _controlService.ExecuteMode(_selectedMode);
-
-            var timestamp = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
-            var historyMessage = $"[{timestamp}] {_selectedMode}実行 - 全機材に適用";
-
-            OperationHistory.Insert(0, historyMessage);
-
-            // 表示制限（最新100件）
-            if (OperationHistory.Count > 100)
+            try
             {
-                OperationHistory.RemoveAt(OperationHistory.Count - 1);
-            }
+                // 実際の制御処理を実行
+                _controlService.ExecuteMode(_selectedMode);
 
-            UpdateHistoryCount();
+                var timestamp = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
+                var historyMessage = $"[{timestamp}] {_selectedMode}実行 - 全機材に適用";
 
-            // 状態を更新
-            ControlStatus = "実行中";
+                OperationHistory.Insert(0, historyMessage);
 
-            CustomDialog.Show(
-                $"機材制御を実行しました。\n\n" +
-                $"モード: {_selectedMode}\n" +
-                $"実行時刻: {timestamp}",
-                "制御実行完了",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-
-            // 1秒後に状態を「実行完了」に更新
-            var timer = new DispatcherTimer();
-            timer.Interval = TimeSpan.FromSeconds(1);
-            timer.Tick += (s, args) =>
-            {
-                ControlStatus = "実行完了";
-                if (s is DispatcherTimer t)
+                // 表示制限（最新100件）
+                if (OperationHistory.Count > 100)
                 {
-                    t.Stop();
+                    OperationHistory.RemoveAt(OperationHistory.Count - 1);
                 }
-            };
-            timer.Start();
+
+                UpdateHistoryCount();
+
+                // 状態を更新
+                ControlStatus = "実行中";
+
+                CustomDialog.Show(
+                    $"機材制御を実行しました。\n\n" +
+                    $"モード: {_selectedMode}\n" +
+                    $"実行時刻: {timestamp}",
+                    "制御実行完了",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                // 1秒後に状態を「実行完了」に更新
+                var timer = new DispatcherTimer();
+                timer.Interval = TimeSpan.FromSeconds(1);
+                timer.Tick += (s, args) =>
+                {
+                    ControlStatus = "実行完了";
+                    if (s is DispatcherTimer t)
+                    {
+                        t.Stop();
+                    }
+                };
+                timer.Start();
+            }
+            catch (Exception ex)
+            {
+                ActionLogger.LogError("機材制御実行", $"機材制御に失敗しました: {ex.Message}");
+                CustomDialog.Show(
+                    $"機材制御の実行中にエラーが発生しました。\n\n{ex.Message}",
+                    "機材制御エラー",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         /// <summary>
